@@ -44,6 +44,12 @@ func TestEnsureSolvePolicy(t *testing.T) {
 	if EnsureSolvePolicy("kubectl taint nodes foo bar=baz:NoSchedule", ns) == nil {
 		t.Fatal("expected block taint")
 	}
+	if EnsureSolvePolicy("kubectl apply -k ./deploy -n "+ns, ns) == nil {
+		t.Fatal("expected block -k")
+	}
+	if EnsureSolvePolicy("kubectl kustomize .", ns) == nil {
+		t.Fatal("expected block kustomize subcommand")
+	}
 }
 
 // Lowercase -a must not be treated as --all-namespaces (regression vs lowercasing the whole line).

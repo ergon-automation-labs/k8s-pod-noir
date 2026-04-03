@@ -239,9 +239,10 @@ Solve mode (examples):
   case 004: patch/remove livenessProbe on deployment/bedside-console
   case 005: raise memory limits or fix start command on deployment/memory-witness
   case 006: kubectl patch service gateway-svc ... selector app=gateway-api
+  case 007: fix or remove failing initContainer on deployment/witness-hold -n pod-noir
   kubectl patch ... --type=json OR --type=strategic  (see debrief)
 
-Solve mode: r / again repeats last kubectl. Precinct blocks -A, namespace delete, cluster admins, taint, etc.; apply -f needs -n and YAML is checked (no other namespace, no cluster-scoped kinds).`))
+Solve mode: r / again repeats last kubectl. Precinct blocks -A, -k/kustomize, namespace delete, cluster admins, taint, etc.; apply -f needs -n and YAML is checked (no other namespace, no cluster-scoped kinds).`))
 		return nil
 	case low == "hist" || low == "history":
 		s.showHistory()

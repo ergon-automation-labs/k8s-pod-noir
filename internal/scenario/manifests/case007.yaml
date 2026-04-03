@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: witness-hold
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: witness-hold
+  annotations:
+    kubernetes.io/change-cause: "witness-hold — init gate exits 1; main container never starts"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: witness-hold
+  template:
+    metadata:
+      labels:
+        app: witness-hold
+        app.kubernetes.io/part-of: pod-noir
+    spec:
+      initContainers:
+        - name: gate
+          image: busybox:1.36.1
+          command: ["/bin/sh", "-c", "exit 1"]
+      containers:
+        - name: app
+          image: busybox:1.36.1
+          command: ["/bin/sh", "-c", "sleep 3600"]

@@ -66,6 +66,7 @@ Scenarios:
 | `case-004-wrong-number` | Liveness probe wrong port (nothing listens) |
 | `case-005-thin-margin` | Memory limit / tmpfs OOM |
 | `case-006-ghost-wire` | Service selector ≠ pod labels (empty endpoints) |
+| `case-007-waiting-on-a-witness` | Failing **initContainer** blocks the app container |
 
 ## REPL shortcuts
 
@@ -81,7 +82,7 @@ In the session loop, **`help`** lists full commands. Shorthand in **normal** mod
 | `r`, `again` | repeat last expanded command (normal) or last successful `kubectl` (solve) |
 | `hist`, `history` | last ~12 commands this session |
 
-**Solve mode** runs real `kubectl` against the case namespace. The precinct blocks cluster-wide and high-risk operations (for example `-A` / `--all-namespaces`, namespace deletes, cluster roles/bindings, node operations, `kubectl taint`, `kubectl adm`). **Mutating commands that use `-f` / `--filename` must pass `-n <case-namespace>`** (or `--namespace=...`); referenced manifest files are **parsed** so `metadata.namespace` must match the case namespace, **cluster-scoped kinds** are rejected, and **`-f -` / URLs** are blocked. Entering solve after a HOT accusation shows **case desk hints** (kubectl angles for that scenario). Type **`exit`** to leave solve mode.
+**Solve mode** runs real `kubectl` against the case namespace. The precinct blocks cluster-wide and high-risk operations (for example `-A` / `--all-namespaces`, namespace deletes, cluster roles/bindings, node operations, `kubectl taint`, `kubectl adm`, **`kubectl kustomize` / `-k`**). **Mutating commands that use `-f` / `--filename` must pass `-n <case-namespace>`** (or `--namespace=...`); referenced manifest files are **parsed** so `metadata.namespace` must match the case namespace, **cluster-scoped kinds** are rejected, and **`-f -` / URLs** are blocked. Entering solve after a HOT accusation shows **case desk hints** (kubectl angles for that scenario). Type **`exit`** to leave solve mode.
 
 ## Environment (`POD_NOIR_*`)
 
@@ -104,12 +105,15 @@ Product intent, tone, and mechanics are spelled out in **[docs/pod-noir-northsta
 ## Development
 
 ```bash
-make lint           # gofmt + go vet + embedded YAML test (needs Go 1.23+ locally)
+make lint-docker    # same as CI **lint** job, inside Docker (no local Go required)
+make lint           # gofmt + go vet + embedded YAML test (local Go 1.23+)
 make test           # go test ./... in Docker (matches CI **test** job)
 make manifests-lint # embedded scenario manifests must parse as YAML
 make compile        # ./bin/podnoir via Compose (Linux ELF; see Docker note above)
 make help
 ```
+
+Contributor orientation: **[AGENTS.md](AGENTS.md)** (Cursor rules pointer, CI parity commands). **What shipped lately:** **[PROGRESS.md](PROGRESS.md)** (index) and **[docs/progress/](docs/progress/)** (monthly notes).
 
 ## CI (GitHub Actions)
 
@@ -117,6 +121,6 @@ Workflow **[`.github/workflows/ci.yml`](.github/workflows/ci.yml)** (push / PR t
 
 1. **lint** — `make lint` (format, `go vet`, embedded manifest YAML).
 2. **test** — `make test` (unit tests inside Docker, same as before).
-3. **integration** — [kind](https://kind.sigs.k8s.io/) with a pinned node image, build `bin/podnoir` with version ldflags, `podnoir version`, then **`podnoir doctor`** against the ephemeral cluster.
+3. **integration** — [kind](https://kind.sigs.k8s.io/) with a **digest-pinned** `kindest/node` image (linux/amd64 on the runner), build `bin/podnoir` with version ldflags, `podnoir version`, then **`podnoir doctor`** against the ephemeral cluster.
 
 Release images get version strings from Docker **`VERSION` / `COMMIT`** build args (Compose passes `VERSION` and `GIT_COMMIT` from `make` / your shell).

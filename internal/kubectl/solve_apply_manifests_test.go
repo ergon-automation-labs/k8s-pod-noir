@@ -100,6 +100,21 @@ items:
 	}
 }
 
+func TestEnsureSolveApplyManifests_multipleFilenameFlags(t *testing.T) {
+	ns := "pod-noir"
+	a := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: a\n"
+	b := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: b\n"
+	files := map[string][]byte{
+		"/tmp/a.yaml": []byte(a),
+		"/tmp/b.yaml": []byte(b),
+	}
+	rf := func(p string) ([]byte, error) { return files[p], nil }
+	line := "kubectl apply -f /tmp/a.yaml -f /tmp/b.yaml -n " + ns
+	if err := ensureSolveApplyManifests(line, ns, "/", rf); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestEnsureSolveApplyManifests_nonMutatingSkipped(t *testing.T) {
 	ns := "pod-noir"
 	line := "kubectl get pods -n " + ns

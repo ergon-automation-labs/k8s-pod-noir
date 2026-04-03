@@ -76,6 +76,17 @@ func SeniorDetectiveMessage(def *scenario.Definition) string {
 
   [ message logged — follow the wire ]
 ─────────────────────────────────────────────────────────────`
+	case scenario.Case007:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "Main container never takes the stand? Look left — initContainers run
+  first. If the gate fails, the story stops in the hallway. Describe the
+  pod and read which box exited angry."
+
+  [ message logged — court runs on order ]
+─────────────────────────────────────────────────────────────`
 	default:
 		return SeniorDetectiveStubMessageDefault()
 	}
@@ -112,7 +123,7 @@ func SeniorPath(def *scenario.Definition) bool {
 	}
 	switch def.ID {
 	case scenario.Case001, scenario.Case002, scenario.Case003,
-		scenario.Case004, scenario.Case005, scenario.Case006:
+		scenario.Case004, scenario.Case005, scenario.Case006, scenario.Case007:
 		return true
 	default:
 		return false

@@ -78,6 +78,8 @@ func accusationHot(def *scenario.Definition, h string, hotScore int) bool {
 		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "oom") || strings.Contains(h, "memory") || strings.Contains(h, "limit") || strings.Contains(h, "shm")))
 	case scenario.Case006:
 		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "selector") || strings.Contains(h, "endpoint") || strings.Contains(h, "service") || strings.Contains(h, "label")))
+	case scenario.Case007:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "init") || strings.Contains(h, "gate") || strings.Contains(h, "initcontainer")))
 	default:
 		return hotScore >= 2
 	}
@@ -157,6 +159,18 @@ func hotReply(def *scenario.Definition) AccuseResult {
 				ns,
 			),
 		}
+	case scenario.Case007:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"That's the hold-up — an initContainer (`gate`) exits non-zero before the app container starts. "+
+					"The main workload never gets the floor.\n\n"+
+					"In solve mode: patch the Deployment so the init succeeds (e.g. `exit 0`) or remove the initContainers stanza, e.g.\n"+
+					"  kubectl patch deployment %[1]s -n %[2]s --type=json "+
+					`-p='[{"op":"replace","path":"/spec/template/spec/initContainers/0/command","value":["/bin/sh","-c","exit 0"]}]'`,
+				dep, ns,
+			),
+		}
 	default:
 		return AccuseResult{Judgment: Hot, Reply: "That's the right root cause for this case. Use solve mode and kubectl to fix the workload."}
 	}
@@ -184,6 +198,11 @@ func warmSymptomReply(def *scenario.Definition) AccuseResult {
 			Judgment: Warm,
 			Reply: "Something is stuck in scheduling or pull — good instinct. Now say exactly what phase the Pod is in " +
 				"and what the events claim (pull vs backoff).",
+		}
+	case scenario.Case007:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "Something runs before the app — good ear. Say whether it's init, sidecar policy, or the main container never scheduling.",
 		}
 	default:
 		return AccuseResult{
@@ -331,6 +350,25 @@ func debriefStatic(def *scenario.Definition) string {
 │                                                             │
 │  STUDY                                                      │
 │  → kubectl get endpoints vs get svc -o wide                 │
+└─────────────────────────────────────────────────────────────┘`, ns))
+	case scenario.Case007:
+		return strings.TrimSpace(fmt.Sprintf(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #007 — CLOSED                                         │
+│  "Waiting on a Witness"                                     │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  initContainer gate exits 1 — Pod never reaches the app     │
+│  container; rollout cannot go Ready.                        │
+│                                                             │
+│  FIX PATHS                                                  │
+│  A) Make init succeed (training):                           │
+│     kubectl patch deployment witness-hold -n %[1]s --type=json \ │
+│       -p='[{"op":"replace","path":"/spec/template/spec/initContainers/0/command","value":["/bin/sh","-c","exit 0"]}]' │
+│  B) Remove initContainers (if story allows)                 │
+│                                                             │
+│  STUDY                                                      │
+│  → init container lifecycle vs CrashLoop on main container   │
 └─────────────────────────────────────────────────────────────┘`, ns))
 	default:
 		return "Case closed. (No debrief text for this scenario.)"

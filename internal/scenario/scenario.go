@@ -27,6 +27,9 @@ var case005 []byte
 //go:embed manifests/case006.yaml
 var case006 []byte
 
+//go:embed manifests/case007.yaml
+var case007 []byte
+
 type ID string
 
 const (
@@ -36,6 +39,7 @@ const (
 	Case004 ID = "case-004-wrong-number"
 	Case005 ID = "case-005-thin-margin"
 	Case006 ID = "case-006-ghost-wire"
+	Case007 ID = "case-007-waiting-on-a-witness"
 )
 
 type Definition struct {
@@ -215,8 +219,8 @@ func ByID(id ID) (*Definition, error) {
 				"crash", "restart", "evicted", "deploy",
 			},
 			SolveHints: []string{
-				"kubectl get pods,svc,endpoints -n pod-noir -o wide — trace selector ↔ labels",
-				"kubectl patch service gateway-svc -n pod-noir --type strategic -p '{\"spec\":{\"selector\":{...}}}'",
+				"kubectl describe pod -n pod-noir — OOMKilled / limits on deployment memory-witness",
+				"kubectl patch deployment memory-witness -n pod-noir — raise memory limits or replace the greedy start command",
 			},
 		}, nil
 	case Case006:
@@ -244,13 +248,37 @@ func ByID(id ID) (*Definition, error) {
 				"Patch gateway-svc.spec.selector to match labels on gateway-api pods (same namespace).",
 			},
 		}, nil
+	case Case007:
+		return &Definition{
+			ID:                        Case007,
+			Title:                     "Waiting on a Witness",
+			Namespace:                 "pod-noir",
+			FolderTease:               "Deployment dressed for court; an init gate won't open the door",
+			ApplySteps:                [][]byte{case007},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "witness-hold",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: Init:0/1 or init crash — the main container never runs until every initContainer succeeds.",
+			FieldNoteAfterExamine:     "Training note: describe pod lists init container state before app logs exist; read that block first.",
+			HotHints: []string{
+				"init", "initcontainer", "initializing", "podinitializing",
+				"gate", "crash", "exit",
+			},
+			WarmHints: []string{
+				"pending", "pod", "deploy", "restart", "stuck",
+			},
+			SolveHints: []string{
+				"kubectl describe pod -n pod-noir — read initContainers status and last termination reason",
+				"kubectl patch deployment witness-hold -n pod-noir — fix or remove the failing initContainer (e.g. make gate exit 0)",
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown scenario %q", id)
 	}
 }
 
 func List() []ID {
-	return []ID{Case001, Case002, Case003, Case004, Case005, Case006}
+	return []ID{Case001, Case002, Case003, Case004, Case005, Case006, Case007}
 }
 
 // boxContentWidth is inner text width between "│  " and "│" (full row = 63 chars).
@@ -349,6 +377,20 @@ func (d *Definition) Briefing(detective string) string {
 		boxRow(&b, "")
 		boxRow(&b, `Handwritten margin (D.): "Follow the wire, not the README."`)
 		boxRow(&b, "")
+	case Case007:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 007 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "Records say witness-hold should testify; the hallway outside")
+		boxRow(&b, "never clears — something won't sign the release form.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. City clerk — digital evidence vault")
+		boxRow(&b, "Call.... 16:55 — they want green before the judge gavels")
+		boxRow(&b, `Says.... "Pod shows up dressed for work but never takes the stand."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "Gates before testimony — check who blocks the door."`)
+		boxRow(&b, "")
 	default:
 		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
 		boxRow(&b, "THE CLUSTER AGENCY")
@@ -377,6 +419,8 @@ func (d *Definition) CurtainLine() string {
 		return "The witness statement and the cgroup verdict don't match — one of them is perjury."
 	case Case006:
 		return "Ready replicas hum in the back room. Out front, the switchboard still says *nobody home*."
+	case Case007:
+		return "The witness chair is empty, but someone in the antechamber keeps answering wrong on purpose."
 	default:
 		return "The paperclip is bent. The cluster is honest in its own language."
 	}

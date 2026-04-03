@@ -43,11 +43,11 @@ jobs:
           go-version: "1.23.x"
           cache-dependency-path: go.sum
 
-      # Pinned kind + node image for reproducible CI (kubectl in Dockerfile is 1.29.x).
+      # Pinned kind + node image (linux/amd64 digest) for reproducible CI — bump tag+digest together.
       - uses: helm/kind-action@v1.10.0
         with:
           version: v0.24.0
-          node_image: kindest/node:v1.29.10
+          node_image: kindest/node:v1.29.10@sha256:f2dc4d5c4a2ccbeadbc4da7e897710ccbf89c098c534c5850fcc26f6e91af81c
 
       - name: Wait for nodes
         run: kubectl wait --for=condition=Ready nodes --all --timeout=120s

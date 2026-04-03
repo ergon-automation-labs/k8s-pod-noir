@@ -76,3 +76,22 @@ services:
       - .:/src
     working_dir: /src
     command: ["go", "test", "-count=1", "./..."]
+
+  # Same checks as CI job "lint" — for hosts without local Go (gofmt, go vet, embedded YAML test).
+  lint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    image: pod-noir:dev-local
+    pull_policy: build
+    volumes:
+      - .:/src
+    working_dir: /src
+    command:
+      - bash
+      - -ec
+      - |
+        test -z "$$(gofmt -l cmd internal)" || (echo >&2 'gofmt needed — run: gofmt -w cmd internal' && gofmt -l cmd internal && exit 1)
+        go vet ./...
+        go test -count=1 ./internal/scenario -run TestEmbeddedManifestsAreValidYAML

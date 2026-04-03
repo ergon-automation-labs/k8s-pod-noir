@@ -1,0 +1,32 @@
+---
+description: Keep PROGRESS.md and docs/progress/YYYY-MM.md current after shipping changes
+alwaysApply: true
+---
+
+# Progress log sync (pod-noir)
+
+When a task **ships** meaningful work (features, scenarios, solve/CI policy, player-visible behavior, or contributor workflow), update the **progress log** in the same session. Do not rely on the user to remember.
+
+## Files (size limits)
+
+| File | Role | Limit |
+|------|------|--------|
+| **[PROGRESS.md](PROGRESS.md)** | Index + **Snapshot** table + table of month links | **≤ ~80 lines** — no long prose |
+| **`docs/progress/YYYY-MM.md`** | Bullets for that calendar month | Prefer **≤ ~40 lines** per month; split by topic only if needed |
+
+**Fan-out:** Never dump specs into `PROGRESS.md`. Add bullets to the **current month** file; refresh **Snapshot** only if the high-level story changed. For new months, create `docs/progress/YYYY-MM.md` and add one row to the table in `PROGRESS.md`.
+
+## When to update
+
+- **New / changed scenario**, REPL/solve behavior, precinct rules, or mock/debrief copy → month file + Snapshot if needed.
+- **CI, Makefile, Compose, AGENTS, major README sections** → month file + Snapshot row “Build / CI” or “Docs” if applicable.
+- **Tiny fix** (typo, one test): optional one bullet in the month file or skip if negligible—use judgment.
+
+## Style
+
+- **Past tense**, short bullets, no duplicate of README tables.
+- Link **northstar** or other `docs/*.md` for product intent, not full replays here.
+
+## If nothing public changed
+
+Say so briefly (e.g. “Progress log unchanged—internal refactor only”) and skip.

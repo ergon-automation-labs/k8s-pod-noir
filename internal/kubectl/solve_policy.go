@@ -27,6 +27,12 @@ func EnsureSolvePolicy(line, allowedNS string) error {
 	if low == "adm" || strings.HasPrefix(low, "adm ") {
 		return fmt.Errorf("precinct policy: kubectl adm is blocked in solve mode")
 	}
+	if kustomizeDirFlag.MatchString(s) {
+		return fmt.Errorf("precinct policy: -k (kustomize directory) is blocked in solve mode")
+	}
+	if low == "kustomize" || strings.HasPrefix(low, "kustomize ") {
+		return fmt.Errorf("precinct policy: kubectl kustomize is blocked in solve mode")
+	}
 	if strings.HasPrefix(low, "certificate ") {
 		return fmt.Errorf("precinct policy: certificate operations are blocked in solve mode")
 	}
@@ -65,6 +71,9 @@ func ensureSolveMutatingFilenameHasNamespace(s, allowedNS string) error {
 
 // Uppercase A only: kubectl uses -A for --all-namespaces; lowercase -a is a different flag on some subcommands.
 var allNamespacesShortFlag = regexp.MustCompile(`(^|\s)-A(\s|$)`)
+
+// -k points at a kustomization directory; manifests are not scanned the same way as -f.
+var kustomizeDirFlag = regexp.MustCompile(`(^|\s)-k(\s|=|$)`)
 
 var solveBlockedSubstrings = []string{
 	"delete clusterrole", "delete clusterrolebinding",

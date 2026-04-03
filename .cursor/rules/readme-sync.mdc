@@ -22,7 +22,7 @@ When a change affects **how people run, configure, or play** the project—or **
 | Commands & flags | CLI reference table |
 | REPL / solve | REPL shortcuts, solve-mode / precinct bullets |
 | Env / integration | Environment (`POD_NOIR_*`) table |
-| CI / dev | Development commands, CI (GitHub Actions) description |
+| CI / dev | Development commands, CI (GitHub Actions), **[AGENTS.md](AGENTS.md)** if contributor paths change |
 
 ## Style
 
@@ -33,3 +33,7 @@ When a change affects **how people run, configure, or play** the project—or **
 ## If README is already correct
 
 Say so briefly (e.g. “README unchanged—change is internal only”) and skip edits.
+
+## Shipped work logging
+
+For **feature / scenario / CI / policy** deliveries, also follow **[progress-sync](progress-sync.mdc)** and update **`PROGRESS.md`** + **`docs/progress/YYYY-MM.md`** (keep those files small; fan out detail by month).
