@@ -36,6 +36,9 @@ func EnsureSolvePolicy(line, allowedNS string) error {
 			return fmt.Errorf("precinct policy: blocked in solve mode (%s)", strings.TrimSpace(d))
 		}
 	}
+	if strings.HasPrefix(low, "taint ") {
+		return fmt.Errorf("precinct policy: node taint operations are blocked in solve mode")
+	}
 
 	if strings.Contains(low, "delete") && strings.Contains(low, "namespace") {
 		return fmt.Errorf("precinct policy: namespace delete is blocked in solve mode")
@@ -68,6 +71,6 @@ var solveBlockedSubstrings = []string{
 	"delete validatingwebhookconfiguration", "delete mutatingwebhookconfiguration",
 	"delete customresourcedefinition", " delete node", "delete nodes",
 	" drain ", " cordon ", " uncordon ",
-	" taint ", " label node", " annotate node",
+	" label node", " annotate node",
 	"create clusterrole", "create clusterrolebinding",
 }

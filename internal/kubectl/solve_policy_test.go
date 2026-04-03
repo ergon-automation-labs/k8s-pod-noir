@@ -41,6 +41,9 @@ func TestEnsureSolvePolicy(t *testing.T) {
 	if EnsureSolvePolicy("kubectl adm upgrade", ns) == nil {
 		t.Fatal("expected block adm")
 	}
+	if EnsureSolvePolicy("kubectl taint nodes foo bar=baz:NoSchedule", ns) == nil {
+		t.Fatal("expected block taint")
+	}
 }
 
 // Lowercase -a must not be treated as --all-namespaces (regression vs lowercasing the whole line).

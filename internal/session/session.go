@@ -192,6 +192,13 @@ func (s *Session) handle(line string) error {
 		if err := kubectl.EnsureSolvePolicy(line, s.NS); err != nil {
 			return err
 		}
+		wd, wdErr := os.Getwd()
+		if wdErr != nil {
+			wd = "."
+		}
+		if err := kubectl.EnsureSolveApplyManifests(line, s.NS, wd); err != nil {
+			return err
+		}
 		out, err := s.execKubectl(line)
 		if err != nil {
 			return err
@@ -234,7 +241,7 @@ Solve mode (examples):
   case 006: kubectl patch service gateway-svc ... selector app=gateway-api
   kubectl patch ... --type=json OR --type=strategic  (see debrief)
 
-Solve mode: r / again repeats last kubectl. Precinct blocks -A, namespace delete, cluster admins, etc.; apply/create/patch with -f needs -n.`))
+Solve mode: r / again repeats last kubectl. Precinct blocks -A, namespace delete, cluster admins, taint, etc.; apply -f needs -n and YAML is checked (no other namespace, no cluster-scoped kinds).`))
 		return nil
 	case low == "hist" || low == "history":
 		s.showHistory()
@@ -416,6 +423,13 @@ func (s *Session) enterSolve() error {
 	}
 	fmt.Fprintln(s.Out, "Solve mode: raw kubectl (shell; quotes ok). Try rollout undo or patch — see help. exit leaves solve mode.")
 	fmt.Fprintf(s.Out, "Precinct policy: mutating commands must target namespace %q (including apply -f … -n %s); no -A, no namespace/node/cluster-admin nukes.\n", s.NS, s.NS)
+	if len(s.Def.SolveHints) > 0 {
+		fmt.Fprintln(s.Out, "")
+		fmt.Fprintln(s.Out, "Case desk — angles that fit this folder:")
+		for _, h := range s.Def.SolveHints {
+			fmt.Fprintf(s.Out, "  • %s\n", h)
+		}
+	}
 	s.solveMode = true
 	return nil
 }
@@ -440,11 +454,11 @@ func (s *Session) status() error {
 func (s *Session) debrief() error {
 	if err := kubectl.VictoryForDefinition(s.ctx, s.Kube, s.NS, s.Def, kubectl.DefaultVictoryTimeout); err != nil {
 		fmt.Fprintln(s.Out, strings.TrimSpace(fmt.Sprintf(`
-The duty sergeant won't stamp CLOSED while the workload's still bleeding.
+The duty sergeant slides the form back unread. The stamp stays in the drawer until the cluster stops lying on the stand.
 
 %v
 
-Tend the cluster first — then debrief when observe would make you proud.`, err)))
+Tend the workload first — then debrief when observe would make you proud.`, err)))
 		return nil
 	}
 	text, err := s.LLM.Debrief(s.ctx, s.Def)

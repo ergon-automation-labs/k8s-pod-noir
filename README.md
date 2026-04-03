@@ -81,7 +81,7 @@ In the session loop, **`help`** lists full commands. Shorthand in **normal** mod
 | `r`, `again` | repeat last expanded command (normal) or last successful `kubectl` (solve) |
 | `hist`, `history` | last ~12 commands this session |
 
-**Solve mode** runs real `kubectl` against the case namespace. The precinct blocks cluster-wide and high-risk operations (for example `-A` / `--all-namespaces`, namespace deletes, cluster roles/bindings, node operations, `kubectl adm`). **Mutating commands that use `-f` / `--filename` must also pass `-n <case-namespace>`** (or `--namespace=...`) so file-based applies cannot target another namespace. Type **`exit`** to leave solve mode.
+**Solve mode** runs real `kubectl` against the case namespace. The precinct blocks cluster-wide and high-risk operations (for example `-A` / `--all-namespaces`, namespace deletes, cluster roles/bindings, node operations, `kubectl taint`, `kubectl adm`). **Mutating commands that use `-f` / `--filename` must pass `-n <case-namespace>`** (or `--namespace=...`); referenced manifest files are **parsed** so `metadata.namespace` must match the case namespace, **cluster-scoped kinds** are rejected, and **`-f -` / URLs** are blocked. Entering solve after a HOT accusation shows **case desk hints** (kubectl angles for that scenario). Type **`exit`** to leave solve mode.
 
 ## Environment (`POD_NOIR_*`)
 

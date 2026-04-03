@@ -64,6 +64,9 @@ type Definition struct {
 	// FieldNoteAfterObserve/Examine are in-universe teaching beats (shown once).
 	FieldNoteAfterObserve string
 	FieldNoteAfterExamine string
+
+	// SolveHints are precinct-safe kubectl reminders shown when entering solve mode.
+	SolveHints []string
 }
 
 func ByID(id ID) (*Definition, error) {
@@ -99,6 +102,10 @@ func ByID(id ID) (*Definition, error) {
 				"2.1.0",
 				"deploy",
 			},
+			SolveHints: []string{
+				"kubectl rollout history deployment/payments-worker -n pod-noir",
+				"kubectl rollout undo deployment/payments-worker -n pod-noir",
+			},
 		}, nil
 	case Case002:
 		return &Definition{
@@ -126,6 +133,10 @@ func ByID(id ID) (*Definition, error) {
 				"pod",
 				"crash",
 				"deploy",
+			},
+			SolveHints: []string{
+				"kubectl create secret generic ledger-signing-secret -n pod-noir --from-file=signing.pem=...",
+				"Confirm the deployment references the secret name your manifest expects.",
 			},
 		}, nil
 	case Case003:
@@ -155,6 +166,10 @@ func ByID(id ID) (*Definition, error) {
 				"crash",
 				"deploy",
 			},
+			SolveHints: []string{
+				"kubectl set image deployment/shipping-notifier notifier=busybox:1.36.1 -n pod-noir",
+				"kubectl describe pod -n pod-noir — confirm Events show pull vs start failures.",
+			},
 		}, nil
 	case Case004:
 		return &Definition{
@@ -174,6 +189,10 @@ func ByID(id ID) (*Definition, error) {
 			},
 			WarmHints: []string{
 				"crash", "restart", "deploy", "sleep",
+			},
+			SolveHints: []string{
+				"kubectl patch deployment bedside-console -n pod-noir — fix liveness/readiness port or path",
+				"Compare probe port to what the container actually listens on.",
 			},
 		}, nil
 	case Case005:
@@ -195,6 +214,10 @@ func ByID(id ID) (*Definition, error) {
 			WarmHints: []string{
 				"crash", "restart", "evicted", "deploy",
 			},
+			SolveHints: []string{
+				"kubectl get pods,svc,endpoints -n pod-noir -o wide — trace selector ↔ labels",
+				"kubectl patch service gateway-svc -n pod-noir --type strategic -p '{\"spec\":{\"selector\":{...}}}'",
+			},
 		}, nil
 	case Case006:
 		return &Definition{
@@ -215,6 +238,10 @@ func ByID(id ID) (*Definition, error) {
 			},
 			WarmHints: []string{
 				"network", "ready", "clusterip", "deploy",
+			},
+			SolveHints: []string{
+				"kubectl get endpoints gateway-svc -n pod-noir — empty subsets mean the Service is not selecting Pods",
+				"Patch gateway-svc.spec.selector to match labels on gateway-api pods (same namespace).",
 			},
 		}, nil
 	default:
