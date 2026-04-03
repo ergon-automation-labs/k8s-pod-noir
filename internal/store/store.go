@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS case_notes (
 	created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_case_notes_session ON case_notes(session_id);
+
+CREATE TABLE IF NOT EXISTS case_folders (
+	scenario_id TEXT PRIMARY KEY,
+	open_count INTEGER NOT NULL DEFAULT 0,
+	solved_count INTEGER NOT NULL DEFAULT 0,
+	last_detective TEXT,
+	last_opened_at TEXT,
+	last_outcome TEXT,
+	last_ended_at TEXT
+);
 `)
 	return err
 }

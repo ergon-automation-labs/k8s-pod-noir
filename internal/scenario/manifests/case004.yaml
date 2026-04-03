@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedside-console
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: bedside-console
+  annotations:
+    kubernetes.io/change-cause: "bedside-console — liveness probes port 8080; process only sleeps (broken)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bedside-console
+  template:
+    metadata:
+      labels:
+        app: bedside-console
+        app.kubernetes.io/part-of: pod-noir
+    spec:
+      containers:
+        - name: console
+          image: busybox:1.36.1
+          command: ["/bin/sh", "-c", "sleep 3600"]
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 6
+            failureThreshold: 2

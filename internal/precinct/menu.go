@@ -2,12 +2,14 @@ package precinct
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	"podnoir/internal/scenario"
+	"podnoir/internal/store"
 )
 
 // Intro is the first-day / file cabinet framing before case selection.
@@ -33,8 +35,19 @@ The drawer groans when you touch it.
 `, detective))
 }
 
-// FileCabinetList lists open cases without the full intro.
-func FileCabinetList() string {
+func folderStamp(st *store.Store, id scenario.ID) string {
+	if st == nil {
+		return ""
+	}
+	f, err := st.FolderOrZero(context.Background(), string(id))
+	if err != nil || f.OpenCount == 0 {
+		return ""
+	}
+	return fmt.Sprintf("dossier: cleared %d× / opened %d×", f.SolvedCount, f.OpenCount)
+}
+
+// FileCabinetList lists scenarios; st may be nil (no dossier stamps).
+func FileCabinetList(st *store.Store) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
 	boxInner(&b, "OPEN FOLDERS — assign yourself a case")
@@ -47,6 +60,9 @@ func FileCabinetList() string {
 		boxInner(&b, fmt.Sprintf("[%d]  %s", i+1, def.Title))
 		boxInner(&b, "     "+def.FolderTease)
 		boxInner(&b, "     "+string(id))
+		if stamp := folderStamp(st, id); stamp != "" {
+			boxInner(&b, "     "+stamp)
+		}
 		boxInner(&b, "")
 	}
 	fmt.Fprintf(&b, "└─────────────────────────────────────────────────────────────┘\n")
@@ -70,13 +86,13 @@ to read another night.`)
 }
 
 // CabinetPeek reminds the player of other cases while one is open.
-func CabinetPeek(open *scenario.Definition) string {
+func CabinetPeek(open *scenario.Definition, st *store.Store) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, strings.TrimSpace(`
 You run a thumb along the cabinet — same metal, same dust. The other
 folders are still here; you've just got this one splayed on the blotter.`))
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, FileCabinetList())
+	fmt.Fprintln(&b, FileCabinetList(st))
 	fmt.Fprintf(&b, "\nOpen now: %s  (%s)\n", open.Title, open.ID)
 	fmt.Fprintln(&b, strings.TrimSpace(`
 To choose a different case, quit — you'll step back to the cabinet (namespace tears down unless -skip-cleanup).`))
@@ -84,12 +100,12 @@ To choose a different case, quit — you'll step back to the cabinet (namespace 
 }
 
 // SelectCase runs the file cabinet until the player picks a valid scenario or quits.
-func SelectCase(in io.Reader, out io.Writer, detective string) (scenario.ID, error) {
+func SelectCase(in io.Reader, out io.Writer, detective string, st *store.Store) (scenario.ID, error) {
 	fmt.Fprintln(out, Intro(detective))
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, FileCabinetList())
+	fmt.Fprintln(out, FileCabinetList(st))
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "Pick a folder [1–3], paste a case id, or quit to leave.\n\n")
+	fmt.Fprintf(out, "Pick a folder [1–%d], paste a case id, or quit to leave.\n\n", len(scenario.List()))
 
 	sc := bufio.NewScanner(in)
 	for {

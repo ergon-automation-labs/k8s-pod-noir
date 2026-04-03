@@ -41,6 +41,15 @@ type Session struct {
 
 	inv contacts.InvestigationState
 
+	shownObserveFieldNote bool
+	shownExamineFieldNote bool
+
+	// REPL shortcuts / history
+	lastExpandedCmd  string
+	lastSolveKubectl string
+	lastLogsPod      string
+	replHistory      []string
+
 	ctx       context.Context
 	cancel    context.CancelFunc
 	cleanupFn func()
@@ -100,6 +109,11 @@ func New(ctx context.Context, kube *kubectl.Runner, st *store.Store, def *scenar
 		"namespace":   ns,
 		"detective":   detective,
 	})
+	if err := st.TouchCaseOpen(cctx, string(def.ID), detective); err != nil {
+		cancel()
+		_ = st.EndSession(context.Background(), id, "folder_touch_failed")
+		return nil, fmt.Errorf("case folder history: %w", err)
+	}
 	return s, nil
 }
 
@@ -110,6 +124,7 @@ func (s *Session) Close(outcome string) {
 		}
 		bg := context.Background()
 		_ = s.Store.EndSession(bg, s.SessID, outcome)
+		_ = s.Store.RecordCaseFolderOutcome(bg, string(s.Def.ID), outcome)
 		s.cancel()
 	})
 }
@@ -129,16 +144,23 @@ func (s *Session) RunREPL() error {
 		if !sc.Scan() {
 			break
 		}
-		line := strings.TrimSpace(sc.Text())
-		if line == "" {
+		orig := strings.TrimSpace(sc.Text())
+		if orig == "" {
 			continue
 		}
-		if err := s.handle(line); err != nil {
+		expanded, xerr := s.expandReplShortcuts(orig, s.solveMode)
+		if xerr != nil {
+			fmt.Fprintln(s.Out, "error:", xerr)
+			continue
+		}
+		if err := s.handle(expanded); err != nil {
 			if err == errQuit {
 				return nil
 			}
 			fmt.Fprintln(s.Out, "error:", err)
+			continue
 		}
+		s.recordReplSuccess(orig, expanded, s.solveMode)
 	}
 	return sc.Err()
 }
@@ -155,20 +177,26 @@ func (s *Session) handle(line string) error {
 			fmt.Fprintln(s.Out, "Left solve mode.")
 			return nil
 		case "cabinet", "files":
-			fmt.Fprintln(s.Out, precinct.CabinetPeek(s.Def))
+			fmt.Fprintln(s.Out, precinct.CabinetPeek(s.Def, s.Store))
+			return nil
+		case "dossier":
+			return s.dossier()
+		case "hist", "history":
+			s.showHistory()
 			return nil
 		case "quit":
 			s.Close("abandoned")
 			events.Emit(s.ctx, s.Emitter, events.SessionAbandoned, map[string]any{"last_command": line})
 			return errQuit
 		}
-		if err := kubectl.EnsureMutatingUsesGameNamespace(line, s.NS); err != nil {
+		if err := kubectl.EnsureSolvePolicy(line, s.NS); err != nil {
 			return err
 		}
 		out, err := s.execKubectl(line)
 		if err != nil {
 			return err
 		}
+		s.rememberSolveLine(line)
 		fmt.Fprintln(s.Out, string(out))
 		return nil
 	}
@@ -184,16 +212,32 @@ Commands:
   accuse <hypothesis>             commit theory (mock LLM judgment)
   solve                           enter kubectl mode (requires HOT accusation)
   status                          case file notes
-  cabinet, files                glance back at the file drawer (other cases)
-  debrief                         after resolution — close the case (mock)
-  hint                            Senior Detective when unlocked (logs+trace or non-HOT accuse)
-  quit                            exit; namespace is cleared (unless -skip-cleanup)
+  cabinet, files                 glance back at the file drawer (other cases)
+  dossier                       your local case-folder history (cleared counts)
+  hist, history                 last dozen commands this session
+  debrief                       close the case once the cluster looks healthy (mock)
+  hint                          Senior Detective when unlocked (logs+trace or non-HOT accuse)
+  quit                          exit; namespace is cleared (unless -skip-cleanup)
+
+Shortcuts (normal mode):
+  o        observe          t <name>   trace
+  l <pod>  check logs       x <pod>    examine pod
+  l        repeat last logs (after one check logs)
+  r, again repeat last command
 
 Solve mode (examples):
   case 001: kubectl rollout undo deployment/payments-worker -n pod-noir
   case 002: kubectl create secret generic ledger-signing-secret -n pod-noir ...
   case 003: kubectl set image deployment/shipping-notifier notifier=busybox:1.36.1 -n pod-noir
-  kubectl patch ... --type=json OR --type=strategic  (see debrief)`))
+  case 004: patch/remove livenessProbe on deployment/bedside-console
+  case 005: raise memory limits or fix start command on deployment/memory-witness
+  case 006: kubectl patch service gateway-svc ... selector app=gateway-api
+  kubectl patch ... --type=json OR --type=strategic  (see debrief)
+
+Solve mode: r / again repeats last kubectl. Precinct blocks -A, namespace delete, cluster admins, etc.; apply/create/patch with -f needs -n.`))
+		return nil
+	case low == "hist" || low == "history":
+		s.showHistory()
 		return nil
 	case low == "quit" || low == "exit":
 		s.Close("abandoned")
@@ -220,8 +264,10 @@ Solve mode (examples):
 	case low == "hint":
 		return s.hint()
 	case low == "cabinet" || low == "files":
-		fmt.Fprintln(s.Out, precinct.CabinetPeek(s.Def))
+		fmt.Fprintln(s.Out, precinct.CabinetPeek(s.Def, s.Store))
 		return nil
+	case low == "dossier":
+		return s.dossier()
 	case low == "debrief":
 		return s.debrief()
 	default:
@@ -244,6 +290,12 @@ func (s *Session) observe() error {
 	fmt.Fprintln(s.Out, "Recent events:")
 	fmt.Fprintln(s.Out, string(ev))
 
+	if !s.shownObserveFieldNote && strings.TrimSpace(s.Def.FieldNoteAfterObserve) != "" {
+		s.shownObserveFieldNote = true
+		fmt.Fprintln(s.Out)
+		fmt.Fprintln(s.Out, strings.TrimSpace(s.Def.FieldNoteAfterObserve))
+	}
+
 	note := "Observed pods and events in namespace " + s.NS
 	return s.logNote("observe", note)
 }
@@ -258,6 +310,11 @@ func (s *Session) examinePod(name string) error {
 	}
 	fmt.Fprintf(s.Out, "EVIDENCE — pod/%s\n", name)
 	fmt.Fprintln(s.Out, string(out))
+	if !s.shownExamineFieldNote && strings.TrimSpace(s.Def.FieldNoteAfterExamine) != "" {
+		s.shownExamineFieldNote = true
+		fmt.Fprintln(s.Out)
+		fmt.Fprintln(s.Out, strings.TrimSpace(s.Def.FieldNoteAfterExamine))
+	}
 	return s.logNote("examine", "Described pod "+name)
 }
 
@@ -274,6 +331,7 @@ func (s *Session) checkLogs(name string) error {
 	if err := s.logNote("logs", "Fetched logs for "+name); err != nil {
 		return err
 	}
+	s.lastLogsPod = name
 	if contacts.SeniorPath(s.Def) {
 		s.inv.SeenLogs = true
 		s.maybeUnlockFromEvidence()
@@ -357,6 +415,7 @@ func (s *Session) enterSolve() error {
 		return fmt.Errorf("solve locked until a HOT accusation — keep investigating")
 	}
 	fmt.Fprintln(s.Out, "Solve mode: raw kubectl (shell; quotes ok). Try rollout undo or patch — see help. exit leaves solve mode.")
+	fmt.Fprintf(s.Out, "Precinct policy: mutating commands must target namespace %q (including apply -f … -n %s); no -A, no namespace/node/cluster-admin nukes.\n", s.NS, s.NS)
 	s.solveMode = true
 	return nil
 }
@@ -379,6 +438,15 @@ func (s *Session) status() error {
 }
 
 func (s *Session) debrief() error {
+	if err := kubectl.VictoryForDefinition(s.ctx, s.Kube, s.NS, s.Def, kubectl.DefaultVictoryTimeout); err != nil {
+		fmt.Fprintln(s.Out, strings.TrimSpace(fmt.Sprintf(`
+The duty sergeant won't stamp CLOSED while the workload's still bleeding.
+
+%v
+
+Tend the cluster first — then debrief when observe would make you proud.`, err)))
+		return nil
+	}
 	text, err := s.LLM.Debrief(s.ctx, s.Def)
 	if err != nil {
 		return err
@@ -389,6 +457,30 @@ func (s *Session) debrief() error {
 		"scenario_id": string(s.Def.ID),
 	})
 	return errQuit
+}
+
+func (s *Session) dossier() error {
+	fmt.Fprintln(s.Out, strings.TrimSpace(`
+DOSSIER — pulled from the local clerk (history.db). "Cleared" means you debriefed
+after the cluster passed the precinct health check for that scenario.`))
+	m, err := s.Store.CaseFolderMap(s.ctx)
+	if err != nil {
+		return err
+	}
+	for _, id := range scenario.List() {
+		f, ok := m[string(id)]
+		if !ok {
+			fmt.Fprintf(s.Out, "  %s — tab untouched\n", id)
+			continue
+		}
+		last := f.LastOutcome
+		if last == "" {
+			last = "—"
+		}
+		fmt.Fprintf(s.Out, "  %s — opened %d×, cleared %d×, last stamp: %s\n",
+			id, f.OpenCount, f.SolvedCount, last)
+	}
+	return nil
 }
 
 func (s *Session) logNote(kind, body string) error {

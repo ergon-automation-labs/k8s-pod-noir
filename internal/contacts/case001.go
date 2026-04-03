@@ -44,6 +44,38 @@ func SeniorDetectiveMessage(def *scenario.Definition) string {
 
   [ message logged — fog lifts for people who look ]
 ─────────────────────────────────────────────────────────────`
+	case scenario.Case004:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "If the process only sleeps but your probe dials HTTP on 8080, kubelet
+  calls that dying on schedule. Fix the probe, fix the port, or prove the
+  app actually listens where the chart claims."
+
+  [ message logged — ward night, long ]
+─────────────────────────────────────────────────────────────`
+	case scenario.Case005:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "OOMKilled is blunt force truth — the cgroup ran out of memory budget.
+  Raise limits, shrink the workload, or stop filling tmpfs like it's free."
+
+  [ message logged — actuaries have feelings too ]
+─────────────────────────────────────────────────────────────`
+	case scenario.Case006:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "Endpoints empty with Ready pods? Your Service is waving at the wrong
+  labels. Patch the selector until get endpoints shows addresses — then
+  the traffic has somewhere to land."
+
+  [ message logged — follow the wire ]
+─────────────────────────────────────────────────────────────`
 	default:
 		return SeniorDetectiveStubMessageDefault()
 	}
@@ -79,7 +111,8 @@ func SeniorPath(def *scenario.Definition) bool {
 		return false
 	}
 	switch def.ID {
-	case scenario.Case001, scenario.Case002, scenario.Case003:
+	case scenario.Case001, scenario.Case002, scenario.Case003,
+		scenario.Case004, scenario.Case005, scenario.Case006:
 		return true
 	default:
 		return false

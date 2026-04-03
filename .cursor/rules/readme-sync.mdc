@@ -1,0 +1,35 @@
+---
+description: Keep README.md current when changing CLI, Docker, CI, REPL, or player-facing behavior
+alwaysApply: true
+---
+
+# README sync (pod-noir)
+
+When a change affects **how people run, configure, or play** the project—or **how contributors build/test**—update **[README.md](README.md) in the same task** (same PR / session). Do not rely on the user to remember a docs pass.
+
+## Update README when you touch
+
+- **CLI**: `cmd/podnoir`, flags, subcommands, `internal/version`, new behavior users see in the terminal.
+- **Session / game loop**: `internal/session` (REPL commands, shortcuts, solve mode, precinct policy, debrief, dossier).
+- **Kube / scenarios**: `internal/kubectl`, `internal/scenario` (doctor, namespaces, safety/policy that players should know).
+- **Ops**: `Makefile`, `docker-compose.yml`, `Dockerfile`, `.github/workflows/*`, config/env in `internal/config` or `POD_NOIR_*` usage.
+
+## Sections to align (edit only what changed)
+
+| Area | README sections |
+|------|-----------------|
+| Run paths | What you need, Quick start (Docker / native), kube-in-Docker note |
+| Commands & flags | CLI reference table |
+| REPL / solve | REPL shortcuts, solve-mode / precinct bullets |
+| Env / integration | Environment (`POD_NOIR_*`) table |
+| CI / dev | Development commands, CI (GitHub Actions) description |
+
+## Style
+
+- Prefer **accurate, short** bullets and tables over long prose.
+- Do not document every internal package or duplicate northstar doc; link **docs/pod-noir-northstar.md** for product intent when appropriate.
+- If you add a **Makefile target** or **Compose service** that users or CI rely on, mention it in **Development** or **Quick start** as fits.
+
+## If README is already correct
+
+Say so briefly (e.g. “README unchanged—change is internal only”) and skip edits.

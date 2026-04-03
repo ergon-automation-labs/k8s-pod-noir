@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: gateway-api
+  annotations:
+    kubernetes.io/change-cause: "gateway-api — pods healthy; Service points at ghost labels (broken)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-api
+  template:
+    metadata:
+      labels:
+        app: gateway-api
+        app.kubernetes.io/part-of: pod-noir
+    spec:
+      containers:
+        - name: gw
+          image: busybox:1.36.1
+          command: ["/bin/sh", "-c", "sleep 3600"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-svc
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+spec:
+  selector:
+    app: invoice-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

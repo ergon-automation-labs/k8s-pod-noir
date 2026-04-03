@@ -20,17 +20,24 @@ import (
 	"podnoir/internal/session"
 	"podnoir/internal/settings"
 	"podnoir/internal/store"
+	"podnoir/internal/version"
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "doctor" {
-		runDoctor(os.Args[2:])
-		return
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "doctor":
+			runDoctor(os.Args[2:])
+			return
+		case "version", "--version":
+			fmt.Fprintln(os.Stdout, "pod-noir", version.Summary())
+			return
+		}
 	}
 
 	cfgPath := flag.String("config", "", "path to config YAML (optional)")
 	dataDir := flag.String("data-dir", "", "app data directory for sqlite (default ~/.pod-noir)")
-	scenID := flag.String("scenario", "", "omit for the file cabinet menu, or: case-001-overnight-shift | case-002-ghost-credential | case-003-dead-letter-harbour")
+	scenID := flag.String("scenario", "", "omit for file cabinet; or case-001 … case-006 ids (see README)")
 	skipCleanup := flag.Bool("skip-cleanup", false, "do not delete the scenario namespace on exit")
 	flag.Parse()
 
@@ -65,7 +72,7 @@ func main() {
 		}
 	} else {
 		var merr error
-		chosen, merr = precinct.SelectCase(os.Stdin, os.Stdout, cfg.Detective.Name)
+		chosen, merr = precinct.SelectCase(os.Stdin, os.Stdout, cfg.Detective.Name, stor)
 		if merr != nil {
 			if errors.Is(merr, scenario.ErrMenuQuit) {
 				fmt.Fprintln(os.Stdout, precinct.LeavingCopy())
@@ -73,7 +80,9 @@ func main() {
 			}
 			die(merr)
 		}
-		fmt.Fprintln(os.Stdout, "\nYou slide the folder free. Paper cuts and possibility.\n")
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, "You slide the folder free. Paper cuts and possibility.")
+		fmt.Fprintln(os.Stdout)
 	}
 
 	def, err := scenario.ByID(chosen)

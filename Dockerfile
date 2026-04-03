@@ -2,10 +2,14 @@
 
 FROM golang:1.23-bookworm AS builder
 WORKDIR /src
+ARG VERSION=dev
+ARG COMMIT=none
 COPY go.mod go.sum* ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/podnoir ./cmd/podnoir
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
+    -ldflags="-s -w -X podnoir/internal/version.Version=${VERSION} -X podnoir/internal/version.Commit=${COMMIT}" \
+    -o /out/podnoir ./cmd/podnoir
 
 FROM alpine:3.20 AS runtime
 RUN apk add --no-cache ca-certificates curl \

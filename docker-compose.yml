@@ -9,6 +9,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
+      args:
+        VERSION: ${VERSION:-dev}
+        COMMIT: ${GIT_COMMIT:-none}
     image: pod-noir:local
     pull_policy: build
     init: true
@@ -34,22 +37,33 @@ services:
       POD_NOIR_LLM_MODEL: ${POD_NOIR_LLM_MODEL:-}
       POD_NOIR_LLM_BASE_URL: ${POD_NOIR_LLM_BASE_URL:-}
       POD_NOIR_LLM_FALLBACK_MOCK: ${POD_NOIR_LLM_FALLBACK_MOCK:-true}
+      POD_NOIR_LLM_REPAIR: ${POD_NOIR_LLM_REPAIR:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   # Build static binary to ./bin/podnoir on the host (linux/amd64 or linux/arm64 in container).
+  # Writes ./bin/podnoir on the host via bind mount. VERSION / GIT_COMMIT from Makefile or shell env.
   compile:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
-    image: pod-noir:builder-local
+      target: dev
+    image: pod-noir:dev-local
     pull_policy: build
     volumes:
       - .:/src
     working_dir: /src
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["mkdir -p bin && CGO_ENABLED=0 go build -trimpath -o bin/podnoir ./cmd/podnoir"]
+    environment:
+      VERSION: ${VERSION:-dev}
+      GIT_COMMIT: ${GIT_COMMIT:-none}
+    command:
+      - bash
+      - -ec
+      - |
+        mkdir -p bin
+        CGO_ENABLED=0 go build -trimpath \
+          -ldflags="-s -w -X podnoir/internal/version.Version=$${VERSION:-dev} -X podnoir/internal/version.Commit=$${GIT_COMMIT:-none}" \
+          -o bin/podnoir ./cmd/podnoir
 
   test:
     build:

@@ -72,6 +72,12 @@ func accusationHot(def *scenario.Definition, h string, hotScore int) bool {
 		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "secret") || strings.Contains(h, "signing")))
 	case scenario.Case003:
 		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "image") || strings.Contains(h, "pull") || strings.Contains(h, "tag")))
+	case scenario.Case004:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "probe") || strings.Contains(h, "liveness") || strings.Contains(h, "8080")))
+	case scenario.Case005:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "oom") || strings.Contains(h, "memory") || strings.Contains(h, "limit") || strings.Contains(h, "shm")))
+	case scenario.Case006:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "selector") || strings.Contains(h, "endpoint") || strings.Contains(h, "service") || strings.Contains(h, "label")))
 	default:
 		return hotScore >= 2
 	}
@@ -114,6 +120,43 @@ func hotReply(def *scenario.Definition) AccuseResult {
 				dep, ns,
 			),
 		}
+	case scenario.Case004:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"Exactly — the workload only sleeps; the liveness HTTP probe hits :8080 where nothing listens. "+
+					"The kubelet kills and restarts on schedule.\n\n"+
+					"In solve mode, remove or fix the probe, e.g.\n"+
+					"  kubectl patch deployment %[1]s -n %[2]s --type=json "+
+					`-p='[{"op":"remove","path":"/spec/template/spec/containers/0/livenessProbe"}]'`+"\n"+
+					"or point httpGet at a real port/path once the app serves HTTP.",
+				dep, ns,
+			),
+		}
+	case scenario.Case005:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"That's it — the container fills /dev/shm past the cgroup memory cap and gets OOMKilled. "+
+					"Limits are doing their job; the story is too big for the room.\n\n"+
+					"In solve mode: raise memory limits, shrink the dd, or replace the start command with something sane, e.g.\n"+
+					"  kubectl patch deployment %[1]s -n %[2]s --type=json "+
+					`-p='[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"256Mi"}]'`,
+				dep, ns,
+			),
+		}
+	case scenario.Case006:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"Bingo — Service selector still says `app=invoice-frontend` but Pods carry `app=gateway-api`. "+
+					"Endpoints stay empty; traffic dies in the wall.\n\n"+
+					"Patch the selector, e.g.\n"+
+					"  kubectl patch service gateway-svc -n %[1]s --type=merge "+
+					`-p '{"spec":{"selector":{"app":"gateway-api"}}}'`,
+				ns,
+			),
+		}
 	default:
 		return AccuseResult{Judgment: Hot, Reply: "That's the right root cause for this case. Use solve mode and kubectl to fix the workload."}
 	}
@@ -121,6 +164,21 @@ func hotReply(def *scenario.Definition) AccuseResult {
 
 func warmSymptomReply(def *scenario.Definition) AccuseResult {
 	switch def.ID {
+	case scenario.Case004:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "Restarts with thin logs often mean the kubelet, not your code — narrow it: probes, hooks, or policy?",
+		}
+	case scenario.Case005:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "Something's starving — good ear. Say whether it's hard limits, eviction, or growth inside the container.",
+		}
+	case scenario.Case006:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "Traffic story — tighten it: Service? Endpoints? Or ingress two hops away?",
+		}
 	case scenario.Case003:
 		return AccuseResult{
 			Judgment: Warm,
@@ -221,6 +279,58 @@ func debriefStatic(def *scenario.Definition) string {
 │  WHAT TO STUDY                                              │
 │  → kubectl describe pod — Events show Failed + pull reason    │
 │  → image name vs tag vs registry auth (here: typo/tag)       │
+└─────────────────────────────────────────────────────────────┘`, ns))
+	case scenario.Case004:
+		return strings.TrimSpace(fmt.Sprintf(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #004 — CLOSED                                         │
+│  "The Wrong Number"                                         │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  livenessProbe httpGet on :8080 but nothing listens —       │
+│  kubelet restarts the container on probe failure.           │
+│                                                             │
+│  FIX PATHS                                                  │
+│  A) Remove probe (training quick fix):                      │
+│     kubectl patch deployment bedside-console -n %[1]s --type=json \ │
+│       -p='[{"op":"remove","path":"/spec/template/spec/containers/0/livenessProbe"}]' │
+│  B) Point probe at real HTTP once app serves it             │
+│                                                             │
+│  STUDY                                                      │
+│  → probe fields vs process actually bound                   │
+└─────────────────────────────────────────────────────────────┘`, ns))
+	case scenario.Case005:
+		return strings.TrimSpace(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #005 — CLOSED                                         │
+│  "The Thin Margin"                                          │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  dd fills /dev/shm past memory limit → OOMKilled.           │
+│                                                             │
+│  FIX PATHS                                                  │
+│  A) Raise memory limits on deployment memory-witness        │
+│  B) Replace start command with harmless sleep only          │
+│                                                             │
+│  STUDY                                                      │
+│  → resources.limits vs OOMKilled / tmpfs                    │
+└─────────────────────────────────────────────────────────────┘`)
+	case scenario.Case006:
+		return strings.TrimSpace(fmt.Sprintf(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #006 — CLOSED                                         │
+│  "The Ghost Wire"                                           │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  Service gateway-svc selector app=invoice-frontend; Pods are  │
+│  app=gateway-api — Endpoints stay empty.                    │
+│                                                             │
+│  FIX                                                        │
+│  kubectl patch service gateway-svc -n %[1]s --type=merge \   │
+│    -p '{"spec":{"selector":{"app":"gateway-api"}}}'          │
+│                                                             │
+│  STUDY                                                      │
+│  → kubectl get endpoints vs get svc -o wide                 │
 └─────────────────────────────────────────────────────────────┘`, ns))
 	default:
 		return "Case closed. (No debrief text for this scenario.)"

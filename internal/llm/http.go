@@ -24,7 +24,20 @@ type HTTP struct {
 	client   *http.Client
 	mock     Mock
 	fallback bool
+	repair   bool
 }
+
+type completionMode int
+
+const (
+	modePlain completionMode = iota
+	modeAccuseJSON
+	modeDebrief
+)
+
+const accuseSystemPrompt = `You are a Kubernetes incident examiner in a noir training game.
+You MUST respond with exactly one JSON object and nothing else: no markdown fences, no preamble, no trailing commentary.
+Keys: "judgment" (string: hot | warm | cold | stone_cold) and "reply" (string: short in-character feedback to the detective, under 12 sentences).`
 
 // NewHTTP builds an HTTP-backed provider from settings (see settings.FromEnv).
 func NewHTTP(s settings.Settings) (*HTTP, error) {
@@ -72,12 +85,13 @@ func NewHTTP(s settings.Settings) (*HTTP, error) {
 		model:    model,
 		client:   &http.Client{Timeout: 120 * time.Second},
 		fallback: s.LLMFallbackMock,
+		repair:   s.LLMRepairAccuse,
 	}, nil
 }
 
 func (h *HTTP) EvaluateAccusation(ctx context.Context, def *scenario.Definition, hypothesis string) (AccuseResult, error) {
 	prompt := buildAccusePrompt(def, hypothesis)
-	text, err := h.complete(ctx, prompt)
+	text, err := h.complete(ctx, prompt, modeAccuseJSON)
 	if err != nil && h.fallback {
 		fmt.Fprintf(os.Stderr, "pod-noir: LLM HTTP error (accuse): %v — using mock\n", err)
 		return h.mock.EvaluateAccusation(ctx, def, hypothesis)
@@ -86,6 +100,13 @@ func (h *HTTP) EvaluateAccusation(ctx context.Context, def *scenario.Definition,
 		return AccuseResult{}, err
 	}
 	res, perr := parseAccuseJSON(text)
+	if perr != nil && h.repair {
+		fixPrompt := accuseRepairPrompt(prompt, text)
+		text2, err2 := h.complete(ctx, fixPrompt, modeAccuseJSON)
+		if err2 == nil {
+			res, perr = parseAccuseJSON(text2)
+		}
+	}
 	if perr != nil && h.fallback {
 		fmt.Fprintf(os.Stderr, "pod-noir: LLM parse error (accuse): %v — using mock\n", perr)
 		return h.mock.EvaluateAccusation(ctx, def, hypothesis)
@@ -96,9 +117,22 @@ func (h *HTTP) EvaluateAccusation(ctx context.Context, def *scenario.Definition,
 	return res, nil
 }
 
+func accuseRepairPrompt(originalUserPrompt, badModelOutput string) string {
+	return strings.TrimSpace(fmt.Sprintf(`Your previous answer was not valid JSON with keys "judgment" and "reply".
+Output ONLY one JSON object. No markdown.
+
+Original task:
+%s
+
+Broken output (do not repeat verbatim; fix it):
+%s`,
+		originalUserPrompt,
+		truncate(badModelOutput, 1200)))
+}
+
 func (h *HTTP) Debrief(ctx context.Context, def *scenario.Definition) (string, error) {
 	prompt := buildDebriefPrompt(def)
-	text, err := h.complete(ctx, prompt)
+	text, err := h.complete(ctx, prompt, modeDebrief)
 	if err != nil && h.fallback {
 		fmt.Fprintf(os.Stderr, "pod-noir: LLM HTTP error (debrief): %v — using mock\n", err)
 		return h.mock.Debrief(ctx, def)
@@ -107,102 +141,78 @@ func (h *HTTP) Debrief(ctx context.Context, def *scenario.Definition) (string, e
 		return "", err
 	}
 	out := strings.TrimSpace(text)
+	out = stripMarkdownFence(out)
 	if out == "" && h.fallback {
 		return h.mock.Debrief(ctx, def)
 	}
+	out = clampRunes(out, 12000)
 	return out, nil
 }
 
 func buildAccusePrompt(def *scenario.Definition, hypothesis string) string {
+	hyp := strings.TrimSpace(hypothesis)
+	hyp = clampRunes(hyp, 2000)
 	var b strings.Builder
 	fmt.Fprintf(&b, "You are the incident commander in a Kubernetes noir training game.\n")
-	fmt.Fprintf(&b, "Scenario ID: %s\nTitle: %s\n", def.ID, def.Title)
-	fmt.Fprintf(&b, "Teaching hints (do not quote verbatim; use to judge depth): hot keywords: %v; warm: %v\n", def.HotHints, def.WarmHints)
-	fmt.Fprintf(&b, "Player hypothesis: %q\n\n", hypothesis)
-	fmt.Fprintf(&b, "Reply with JSON ONLY, no markdown fences, shape:\n")
+	fmt.Fprintf(&b, "Scenario ID: %s\nTitle: %s\nNamespace: %s\n", def.ID, def.Title, def.Namespace)
+	fmt.Fprintf(&b, "Main workload for this file: deployment/%s\n", def.SolveDeployment)
+	if strings.TrimSpace(def.VictoryMode) == "endpoints" && strings.TrimSpace(def.VictoryService) != "" {
+		fmt.Fprintf(&b, "Victory for debrief includes endpoints on Service %q.\n", def.VictoryService)
+	}
+	fmt.Fprintf(&b, "Teaching hints (judge depth; do not quote verbatim):\n  hot keywords: %v\n  warm: %v\n", def.HotHints, def.WarmHints)
+	fmt.Fprintf(&b, "Detective hypothesis: %q\n\n", hyp)
+	fmt.Fprintf(&b, "Reply with JSON ONLY (no markdown):\n")
 	fmt.Fprintf(&b, `{"judgment":"hot|warm|cold|stone_cold","reply":"<short in-character feedback>"}`+"\n")
-	fmt.Fprintf(&b, "Judgment: hot=cause nailed; warm=right layer; cold=weak; stone_cold=empty/wrong.\n")
+	fmt.Fprintf(&b, "Judgment rubric: hot=nailed root cause; warm=right layer; cold=weak; stone_cold=nonsense or empty theory.\n")
 	return b.String()
 }
 
 func buildDebriefPrompt(def *scenario.Definition) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Write a case debrief for Kubernetes training scenario %s (%s).\n", def.ID, def.Title)
-	fmt.Fprintf(&b, "Noir tone; ASCII box optional. Teach the real root cause and give 1–3 valid kubectl fix paths.\n")
-	fmt.Fprintf(&b, "Themes: case-001 bad rollout / missing file; case-002 missing Secret / secretKeyRef; case-003 bad image tag / ImagePullBackOff.\n")
-	fmt.Fprintf(&b, "Namespace for examples: %s. Keep under ~40 lines.\n", def.Namespace)
+	fmt.Fprintf(&b, "Write the closing case debrief for Kubernetes training scenario %s (%s).\n\n", def.ID, def.Title)
+	fmt.Fprintf(&b, "Constraints:\n")
+	fmt.Fprintf(&b, "- Plain text or ASCII box drawing — NOT JSON.\n")
+	fmt.Fprintf(&b, "- Noir voice; precise; no hallucinating tools the player didn't have.\n")
+	fmt.Fprintf(&b, "- Teach real root cause + 1–3 concrete kubectl examples in namespace %q.\n\n", def.Namespace)
+	fmt.Fprintf(&b, "Theme map: 001 rollout/missing file; 002 Secret/secretKeyRef; 003 image pull; 004 probes; 005 OOM/limits/tmpfs; 006 Service selector/endpoints.\n")
+	fmt.Fprintf(&b, "The live cluster already passed a health check — describe the fix as if the burden is now explained and filed.\n")
+	fmt.Fprintf(&b, "Keep under ~45 short lines.\n")
 	return b.String()
 }
 
-func parseAccuseJSON(raw string) (AccuseResult, error) {
-	js := extractJSONObject(raw)
-	var out struct {
-		Judgment string `json:"judgment"`
-		Reply    string `json:"reply"`
-	}
-	if err := json.Unmarshal([]byte(js), &out); err != nil {
-		return AccuseResult{}, fmt.Errorf("parse LLM JSON: %w (raw: %s)", err, truncate(raw, 400))
-	}
-	j := normalizeJudgment(out.Judgment)
-	if out.Reply == "" {
-		out.Reply = "No reply text from model."
-	}
-	return AccuseResult{Judgment: j, Reply: out.Reply}, nil
-}
-
-func normalizeJudgment(s string) Judgment {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "hot":
-		return Hot
-	case "warm":
-		return Warm
-	case "cold":
-		return Cold
-	case "stone_cold", "stonecold":
-		return StoneCold
-	default:
-		return Cold
-	}
-}
-
-func extractJSONObject(s string) string {
-	s = strings.TrimSpace(s)
-	if i := strings.Index(s, "{"); i >= 0 {
-		s = s[i:]
-	}
-	if j := strings.LastIndex(s, "}"); j >= 0 {
-		s = s[:j+1]
-	}
-	return s
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}
-
-func (h *HTTP) complete(ctx context.Context, userPrompt string) (string, error) {
+func (h *HTTP) complete(ctx context.Context, userPrompt string, mode completionMode) (string, error) {
 	switch h.kind {
 	case "anthropic":
-		return h.anthropic(ctx, userPrompt)
+		return h.anthropic(ctx, userPrompt, mode)
 	case "openai":
-		return h.openai(ctx, userPrompt)
+		return h.openai(ctx, userPrompt, mode)
 	case "ollama":
-		return h.ollama(ctx, userPrompt)
+		return h.ollama(ctx, userPrompt, mode)
 	default:
 		return "", fmt.Errorf("unknown kind %q", h.kind)
 	}
 }
 
-func (h *HTTP) anthropic(ctx context.Context, userPrompt string) (string, error) {
+func (h *HTTP) anthropic(ctx context.Context, userPrompt string, mode completionMode) (string, error) {
+	maxTok := 4096
+	system := ""
+	switch mode {
+	case modeAccuseJSON:
+		maxTok = 1024
+		system = accuseSystemPrompt
+	case modeDebrief:
+		maxTok = 4096
+		system = "You write clear operational debriefs with a noir tone. Never output JSON for debriefs."
+	}
 	body := map[string]any{
 		"model":      h.model,
-		"max_tokens": 2048,
+		"max_tokens": maxTok,
 		"messages": []map[string]string{
 			{"role": "user", "content": userPrompt},
 		},
+	}
+	if system != "" {
+		body["system"] = system
 	}
 	b, _ := json.Marshal(body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.baseURL+"/v1/messages", bytes.NewReader(b))
@@ -235,13 +245,24 @@ func (h *HTTP) anthropic(ctx context.Context, userPrompt string) (string, error)
 	return out.Content[0].Text, nil
 }
 
-func (h *HTTP) openai(ctx context.Context, userPrompt string) (string, error) {
+func (h *HTTP) openai(ctx context.Context, userPrompt string, mode completionMode) (string, error) {
 	url := h.baseURL + "/chat/completions"
 	body := map[string]any{
 		"model": h.model,
 		"messages": []map[string]string{
+			{"role": "system", "content": "Follow the user instructions exactly. For JSON requests, output only valid JSON."},
 			{"role": "user", "content": userPrompt},
 		},
+	}
+	if mode == modeAccuseJSON {
+		body["response_format"] = map[string]any{"type": "json_object"}
+	}
+	if mode == modeDebrief {
+		delete(body, "response_format")
+		body["messages"] = []map[string]string{
+			{"role": "system", "content": "You write operational Kubernetes debriefs in plain text. Never use JSON."},
+			{"role": "user", "content": userPrompt},
+		}
 	}
 	b, _ := json.Marshal(body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
@@ -275,7 +296,7 @@ func (h *HTTP) openai(ctx context.Context, userPrompt string) (string, error) {
 	return out.Choices[0].Message.Content, nil
 }
 
-func (h *HTTP) ollama(ctx context.Context, userPrompt string) (string, error) {
+func (h *HTTP) ollama(ctx context.Context, userPrompt string, mode completionMode) (string, error) {
 	url := h.baseURL + "/api/chat"
 	body := map[string]any{
 		"model": h.model,
@@ -283,6 +304,20 @@ func (h *HTTP) ollama(ctx context.Context, userPrompt string) (string, error) {
 			{"role": "user", "content": userPrompt},
 		},
 		"stream": false,
+	}
+	if mode == modeAccuseJSON {
+		body["format"] = "json"
+		body["messages"] = []map[string]string{
+			{"role": "system", "content": accuseSystemPrompt},
+			{"role": "user", "content": userPrompt},
+		}
+	}
+	if mode == modeDebrief {
+		body["messages"] = []map[string]string{
+			{"role": "system", "content": "Write plain-text operational debriefs. Do not output JSON."},
+			{"role": "user", "content": userPrompt},
+		}
+		delete(body, "format")
 	}
 	b, _ := json.Marshal(body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))

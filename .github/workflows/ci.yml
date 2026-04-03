@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          cache-dependency-path: go.sum
+
+      - name: Lint (gofmt, go vet, embedded YAML)
+        run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Unit tests (Docker)
+        run: make test
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          cache-dependency-path: go.sum
+
+      # Pinned kind + node image for reproducible CI (kubectl in Dockerfile is 1.29.x).
+      - uses: helm/kind-action@v1.10.0
+        with:
+          version: v0.24.0
+          node_image: kindest/node:v1.29.10
+
+      - name: Wait for nodes
+        run: kubectl wait --for=condition=Ready nodes --all --timeout=120s
+
+      - name: Build podnoir
+        run: |
+          SHORT=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          mkdir -p bin
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags="-s -w -X podnoir/internal/version.Version=ci -X podnoir/internal/version.Commit=${SHORT}" \
+            -o bin/podnoir ./cmd/podnoir
+
+      - name: Version metadata
+        run: ./bin/podnoir version
+
+      - name: Doctor against kind
+        run: ./bin/podnoir doctor

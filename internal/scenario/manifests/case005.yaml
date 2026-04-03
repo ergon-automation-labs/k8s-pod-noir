@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-witness
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: memory-witness
+  annotations:
+    kubernetes.io/change-cause: "memory-witness — fills tmpfs past cgroup memory limit (OOM)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-witness
+  template:
+    metadata:
+      labels:
+        app: memory-witness
+        app.kubernetes.io/part-of: pod-noir
+    spec:
+      containers:
+        - name: hog
+          image: busybox:1.36.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              dd if=/dev/zero of=/dev/shm/hog bs=1M count=400 status=none 2>/dev/null || true
+              exec sleep 3600
+          resources:
+            limits:
+              memory: "48Mi"
+            requests:
+              memory: "48Mi"

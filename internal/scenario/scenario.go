@@ -18,12 +18,24 @@ var case002 []byte
 //go:embed manifests/case003.yaml
 var case003 []byte
 
+//go:embed manifests/case004.yaml
+var case004 []byte
+
+//go:embed manifests/case005.yaml
+var case005 []byte
+
+//go:embed manifests/case006.yaml
+var case006 []byte
+
 type ID string
 
 const (
 	Case001 ID = "case-001-overnight-shift"
 	Case002 ID = "case-002-ghost-credential"
 	Case003 ID = "case-003-dead-letter-harbour"
+	Case004 ID = "case-004-wrong-number"
+	Case005 ID = "case-005-thin-margin"
+	Case006 ID = "case-006-ghost-wire"
 )
 
 type Definition struct {
@@ -43,6 +55,15 @@ type Definition struct {
 
 	// SolveDeployment is the main workload the player patches or rollbacks (help/debrief text).
 	SolveDeployment string
+
+	// VictoryMode: "" or "rollout" (default) — successful rollout of SolveDeployment;
+	// "endpoints" — VictoryService must have endpoint addresses.
+	VictoryMode    string
+	VictoryService string
+
+	// FieldNoteAfterObserve/Examine are in-universe teaching beats (shown once).
+	FieldNoteAfterObserve string
+	FieldNoteAfterExamine string
 }
 
 func ByID(id ID) (*Definition, error) {
@@ -59,6 +80,9 @@ func ByID(id ID) (*Definition, error) {
 			},
 			RolloutWaitAfterFirstStep: "payments-worker",
 			SolveDeployment:           "payments-worker",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: rollout history is a confession; events are the alibi.",
+			FieldNoteAfterExamine:     "Training note: describe pod tells you which container dies — and what the kubelet saw.",
 			HotHints: []string{
 				"settings.json",
 				"config",
@@ -85,6 +109,9 @@ func ByID(id ID) (*Definition, error) {
 			ApplySteps:                [][]byte{case002},
 			RolloutWaitAfterFirstStep: "",
 			SolveDeployment:           "ledger-api",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: pods that never start often fail before your binary runs — scan events for Secret/Config.",
+			FieldNoteAfterExamine:     "Training note: look for CreateContainerConfigError in Events — that's the kubelet refusing the spec.",
 			HotHints: []string{
 				"secret",
 				"secretkeyref",
@@ -110,6 +137,9 @@ func ByID(id ID) (*Definition, error) {
 			ApplySteps:                [][]byte{case003},
 			RolloutWaitAfterFirstStep: "",
 			SolveDeployment:           "shipping-notifier",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: ImagePullBackOff stays on the marquee — describe pod reads the registry's verdict.",
+			FieldNoteAfterExamine:     "Training note: Failed + FailedPullImage in Events beats a handsome Deployment YAML.",
 			HotHints: []string{
 				"image",
 				"pull",
@@ -126,13 +156,74 @@ func ByID(id ID) (*Definition, error) {
 				"deploy",
 			},
 		}, nil
+	case Case004:
+		return &Definition{
+			ID:                        Case004,
+			Title:                     "The Wrong Number",
+			Namespace:                 "pod-noir",
+			FolderTease:               "Chart says the patient's breathing; the probe keeps calling a dead line",
+			ApplySteps:                [][]byte{case004},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "bedside-console",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: CrashLoopBackOff with restarts but no app logs often means probes, not business logic.",
+			FieldNoteAfterExamine:     "Training note: Unhealthy + HTTP probe failures point at the wrong port/path — compare probe to what actually listens.",
+			HotHints: []string{
+				"probe", "liveness", "readiness", "http", "8080", "port",
+				"unhealthy",
+			},
+			WarmHints: []string{
+				"crash", "restart", "deploy", "sleep",
+			},
+		}, nil
+	case Case005:
+		return &Definition{
+			ID:                        Case005,
+			Title:                     "The Thin Margin",
+			Namespace:                 "pod-noir",
+			FolderTease:               "Witness swears it ran yesterday; cgroup says the memory story doesn't fit",
+			ApplySteps:                [][]byte{case005},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "memory-witness",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: OOMKilled is the node's edit — limits are sentences; exceeding them is contempt.",
+			FieldNoteAfterExamine:     "Training note: Last State: Terminated, Reason: OOMKilled — that's the coroner's stamp, not a flake.",
+			HotHints: []string{
+				"oom", "oomkilled", "memory", "limit", "tmpfs", "shm",
+				"cgroup",
+			},
+			WarmHints: []string{
+				"crash", "restart", "evicted", "deploy",
+			},
+		}, nil
+	case Case006:
+		return &Definition{
+			ID:                        Case006,
+			Title:                     "The Ghost Wire",
+			Namespace:                 "pod-noir",
+			FolderTease:               "Pods answer roll call; the Service knocks on an empty apartment",
+			ApplySteps:                [][]byte{case006},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "gateway-api",
+			VictoryMode:               "endpoints",
+			VictoryService:            "gateway-svc",
+			FieldNoteAfterObserve:     "Training note: a Ready Deployment with no Service traffic often means the wire — selector ↔ labels.",
+			FieldNoteAfterExamine:     "Training note: kubectl get endpoints — if subsets are empty, the Service isn't talking to your Pods.",
+			HotHints: []string{
+				"selector", "service", "endpoints", "label",
+				"gateway", "invoice",
+			},
+			WarmHints: []string{
+				"network", "ready", "clusterip", "deploy",
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown scenario %q", id)
 	}
 }
 
 func List() []ID {
-	return []ID{Case001, Case002, Case003}
+	return []ID{Case001, Case002, Case003, Case004, Case005, Case006}
 }
 
 // boxContentWidth is inner text width between "│  " and "│" (full row = 63 chars).
@@ -189,6 +280,48 @@ func (d *Definition) Briefing(detective string) string {
 		boxRow(&b, "")
 		boxRow(&b, `Handwritten margin (D.): "Phase lies less than people."`)
 		boxRow(&b, "")
+	case Case004:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 004 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "Ward clerk says the bedside console 'restarts like it owes money'.")
+		boxRow(&b, "Telemetry chart is a flat line — nobody's home on 8080.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. Midtown General outpatient IT")
+		boxRow(&b, "Call.... 22:10 — night shift, voice tight")
+		boxRow(&b, `Says.... "console pod never settles; Nursing can't clear beds."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "Listen for probes lying about ports."`)
+		boxRow(&b, "")
+	case Case005:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 005 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "Insurance auditor flagged a witness workload — memory sketch")
+		boxRow(&b, "says forty-eight megs; the story inside wants a cathedral.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. Meridian Casualty internal tools")
+		boxRow(&b, "Call.... 14:40 — actuarial tempers run hot")
+		boxRow(&b, `Says.... "memory-witness keeps dying; nobody touched the code."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "Cgroups don't negotiate."`)
+		boxRow(&b, "")
+	case Case006:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 006 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "Gateway team swears traffic should flow; curl from another pod")
+		boxRow(&b, "gets you dial tone forever — maps don't match territory.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. North Harbor API guild")
+		boxRow(&b, "Call.... 09:51 — polite, furious")
+		boxRow(&b, `Says.... "gateway-svc is a ghost; deployments look Ready."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "Follow the wire, not the README."`)
+		boxRow(&b, "")
 	default:
 		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
 		boxRow(&b, "THE CLUSTER AGENCY")
@@ -211,6 +344,12 @@ func (d *Definition) CurtainLine() string {
 		return "The coffee ring on the form could be a halo or a warning. You open the namespace like a drawer."
 	case Case003:
 		return "Harbor lights don't lie — they just don't tell you what's in the container until you look."
+	case Case004:
+		return "The monitor beeps reassurance. Somewhere a probe keeps calling a number that never answers."
+	case Case005:
+		return "The witness statement and the cgroup verdict don't match — one of them is perjury."
+	case Case006:
+		return "Ready replicas hum in the back room. Out front, the switchboard still says *nobody home*."
 	default:
 		return "The paperclip is bent. The cluster is honest in its own language."
 	}
