@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-worker
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: payments-worker
+  annotations:
+    kubernetes.io/change-cause: 'payments-worker 2.1.0 — expects /app/config/settings.json (broken)'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payments-worker
+  template:
+    metadata:
+      labels:
+        app: payments-worker
+        app.kubernetes.io/part-of: pod-noir
+        version: "2.1.0"
+    spec:
+      containers:
+        - name: payments-worker
+          image: busybox:1.36.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo '/app/start.sh: line 4: /app/config/settings.json: No such file or directory' >&2
+              echo '/app/start.sh: Configuration file not found. Exiting.' >&2
+              exit 1

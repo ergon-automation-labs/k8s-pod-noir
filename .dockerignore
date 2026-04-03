@@ -1,0 +1,7 @@
+bin/
+.git
+.github
+*.md
+.DS_Store
+.env
+.pod-noir-data

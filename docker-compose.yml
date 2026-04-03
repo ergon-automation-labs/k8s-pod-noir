@@ -1,0 +1,64 @@
+# POD noir — local execution against your kubeconfig.
+#
+# Kubernetes API is usually on the host (127.0.0.1:6443). Inside the container,
+# use host.docker.internal (Docker Desktop / recent Compose). If connection fails,
+# point your kubeconfig server URL at https://host.docker.internal:6443 for this context.
+services:
+  podnoir:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: pod-noir:local
+    pull_policy: build
+    init: true
+    stdin_open: true
+    tty: true
+    volumes:
+      - ${HOME}/.kube:/root/.kube:ro
+    environment:
+      KUBECONFIG: /root/.kube/config
+      # Rewrite 127.0.0.1/localhost API URLs to host.docker.internal (see internal/kubectl/kubeconfig_docker.go)
+      POD_NOIR_KUBE_IN_DOCKER: ${POD_NOIR_KUBE_IN_DOCKER:-true}
+      POD_NOIR_KUBE_API_HOST: ${POD_NOIR_KUBE_API_HOST:-}
+      # Default unset = true: skip TLS verify when server host is rewritten (local cluster certs lack host.docker.internal SAN)
+      POD_NOIR_KUBE_TLS_INSECURE: ${POD_NOIR_KUBE_TLS_INSECURE:-}
+      # Pass-through (override on host: export POD_NOIR_NATS_URL=... before docker compose run)
+      POD_NOIR_EVENTS_ADAPTER: ${POD_NOIR_EVENTS_ADAPTER:-stdout}
+      POD_NOIR_NATS_URL: ${POD_NOIR_NATS_URL:-}
+      POD_NOIR_NATS_SUBJECT_PREFIX: ${POD_NOIR_NATS_SUBJECT_PREFIX:-pod-noir}
+      POD_NOIR_NATS_BRIDGE: ${POD_NOIR_NATS_BRIDGE:-false}
+      POD_NOIR_NATS_BRIDGE_EVENTS_PREFIX: ${POD_NOIR_NATS_BRIDGE_EVENTS_PREFIX:-events.pod_noir}
+      POD_NOIR_LLM_PROVIDER: ${POD_NOIR_LLM_PROVIDER:-mock}
+      POD_NOIR_LLM_API_KEY: ${POD_NOIR_LLM_API_KEY:-}
+      POD_NOIR_LLM_MODEL: ${POD_NOIR_LLM_MODEL:-}
+      POD_NOIR_LLM_BASE_URL: ${POD_NOIR_LLM_BASE_URL:-}
+      POD_NOIR_LLM_FALLBACK_MOCK: ${POD_NOIR_LLM_FALLBACK_MOCK:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Build static binary to ./bin/podnoir on the host (linux/amd64 or linux/arm64 in container).
+  compile:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: pod-noir:builder-local
+    pull_policy: build
+    volumes:
+      - .:/src
+    working_dir: /src
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["mkdir -p bin && CGO_ENABLED=0 go build -trimpath -o bin/podnoir ./cmd/podnoir"]
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    image: pod-noir:dev-local
+    pull_policy: build
+    volumes:
+      - .:/src
+    working_dir: /src
+    command: ["go", "test", "-count=1", "./..."]

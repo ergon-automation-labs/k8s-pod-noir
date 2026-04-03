@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ledger-api
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: ledger-api
+  annotations:
+    kubernetes.io/change-cause: "ledger-api — requires Secret ledger-signing-secret (broken: secret missing)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ledger-api
+  template:
+    metadata:
+      labels:
+        app: ledger-api
+        app.kubernetes.io/part-of: pod-noir
+    spec:
+      containers:
+        - name: api
+          image: busybox:1.36.1
+          command: ["/bin/sh", "-c", "echo 'ledger-api up' && sleep 3600"]
+          env:
+            - name: LEDGER_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ledger-signing-secret
+                  key: signing.pem

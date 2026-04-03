@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping-notifier
+  namespace: pod-noir
+  labels:
+    app.kubernetes.io/part-of: pod-noir
+    app: shipping-notifier
+  annotations:
+    kubernetes.io/change-cause: "shipping-notifier — invalid image tag (broken pull)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shipping-notifier
+  template:
+    metadata:
+      labels:
+        app: shipping-notifier
+        app.kubernetes.io/part-of: pod-noir
+    spec:
+      containers:
+        - name: notifier
+          image: busybox:9.99.99-noir-invalid-tag
+          command: ["/bin/sh", "-c", "echo ready && sleep 3600"]

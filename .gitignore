@@ -1,0 +1,12 @@
+/bin/
+/dist/
+*.exe
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage.out
+*.test
+
+# Local app data (sqlite, optional config copies)
+.pod-noir-data/
