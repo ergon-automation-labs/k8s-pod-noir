@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Tracked in-repo hook. Runs the same playtest smoke as pre-commit — catches work
+# committed with --no-verify or SKIP_PLAYTEST_SMOKE when you push.
+# Bypass push hook only: git push --no-verify
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+export POD_NOIR_GIT_HOOK=pre-push
+exec "$ROOT/scripts/pre-commit-playtest.sh"

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Tracked in-repo hook. Enable: ./scripts/setup-git-hooks.sh  (sets core.hooksPath=githooks)
+# pre-push runs the same check — see githooks/pre-push
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
+export POD_NOIR_GIT_HOOK=pre-commit
 exec "$ROOT/scripts/pre-commit-playtest.sh"

@@ -26,7 +26,7 @@ help:
 	@echo "make build-native - go build ./cmd/podnoir (requires local Go)"
 	@echo "make manifests-lint - validate embedded scenario YAML parses"
 	@echo "make lint         - gofmt + go vet + manifests-lint (needs local Go; CI runs this first)"
-	@echo "make git-hooks   - git config core.hooksPath=githooks (tracked hooks/; run once per clone)"
+	@echo "make git-hooks   - git config core.hooksPath=githooks (pre-commit + pre-push playtest; once per clone)"
 	@echo "See docker-compose.yml for kubeconfig / host.docker.internal notes."
 	@echo "Integration env: POD_NOIR_EVENTS_ADAPTER, POD_NOIR_NATS_URL, POD_NOIR_NATS_BRIDGE, ..."
 

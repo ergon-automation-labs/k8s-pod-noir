@@ -5,7 +5,7 @@ Use this for **spot-checking gameplay** without walking all scenarios. Pair with
 ## Before you start
 
 - [ ] Cluster reachable: `make playtest-smoke` passes **`podnoir doctor`**, or **`make playtest-smoke-ci`** (build + smoke in Docker, no host Go).
-- [ ] Optional: **`make git-hooks`** — sets **`core.hooksPath`** to **`githooks/`** (tracked in-repo); the **playtest** hook prints **skip** reasons (no Docker / no kube / offline) instead of failing silently; set **`SKIP_PLAYTEST_SMOKE=1`** to bypass.
+- [ ] Optional: **`make git-hooks`** — **`core.hooksPath`** → **`githooks/`** (**pre-commit** + **pre-push**); hooks print **skip** reasons when Docker/kube/cluster are missing; **`SKIP_PLAYTEST_SMOKE=1`** skips **both**; **`git push --no-verify`** bypasses **pre-push** only.
 - [ ] Optional: `make test` and `make lint-docker` green after your changes.
 - [ ] Mock LLM is fine for flow testing: default `POD_NOIR_LLM_PROVIDER=mock` (or unset).
 
