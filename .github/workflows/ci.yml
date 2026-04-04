@@ -63,5 +63,7 @@ jobs:
       - name: Version metadata
         run: ./bin/podnoir version
 
-      - name: Doctor against kind
-        run: ./bin/podnoir doctor
+      - name: Playtest smoke (doctor + kubectl report)
+        env:
+          CI: "true"
+        run: ./scripts/playtest-smoke.sh

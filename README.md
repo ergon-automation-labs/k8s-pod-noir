@@ -113,8 +113,11 @@ Tone, learning loop, and non-goals live in **[docs/pod-noir-northstar.md](docs/p
 
 ## Playtesting
 
-- **`make playtest-smoke`** — `podnoir doctor` plus optional host **`kubectl`** checks.
+- **`make playtest-smoke`** — `podnoir doctor` plus optional host **`kubectl`** checks (Compose locally; see script for skip env vars).
+- **`make playtest-smoke-ci`** — same **`doctor` + kubectl report** as the **integration** job, **inside Docker** (builds `./bin/podnoir` in the dev image — no host **Go** required).
 - **[docs/playtest-checklist.md](docs/playtest-checklist.md)** — a **small scenario matrix** and a tight loop so you don’t have to play every folder before a release.
+
+**Pre-commit (optional):** `pip install pre-commit && pre-commit install` runs **[`.pre-commit-config.yaml`](.pre-commit-config.yaml)** — including **`scripts/pre-commit-playtest.sh`**, which runs **`playtest-smoke`** when **Docker**, **`kubectl`**, and a **reachable cluster** are present; otherwise it **prints a skip reason** and exits **0** (so commits are not blocked offline). Set **`SKIP_PLAYTEST_SMOKE=1`** or **`POD_NOIR_SKIP_PLAYTEST=1`** to silence the hook.
 
 ## Development
 
@@ -124,7 +127,8 @@ make lint           # gofmt + go vet + embedded YAML test (local Go 1.23+)
 make test           # go test ./... in Docker (matches CI **test** job)
 make manifests-lint # embedded scenario manifests must parse as YAML
 make compile        # ./bin/podnoir via Compose (Linux ELF; see above)
-make playtest-smoke # doctor + optional kubectl (see Playtesting)
+make playtest-smoke    # doctor + optional kubectl (see Playtesting)
+make playtest-smoke-ci # integration parity: build + smoke in Docker (no host Go)
 make help
 ```
 
@@ -136,6 +140,6 @@ Workflow **[`.github/workflows/ci.yml`](.github/workflows/ci.yml)** (push / PR t
 
 1. **lint** — `make lint` (format, `go vet`, embedded manifest YAML).
 2. **test** — `make test` (unit tests inside Docker).
-3. **integration** — [kind](https://kind.sigs.k8s.io/) with a **digest-pinned** `kindest/node` image (linux/amd64 on the runner), build `bin/podnoir`, `podnoir version`, then **`podnoir doctor`**.
+3. **integration** — [kind](https://kind.sigs.k8s.io/) with a **digest-pinned** `kindest/node` image (linux/amd64 on the runner), build `bin/podnoir`, `podnoir version`, then **`scripts/playtest-smoke.sh`** with **`CI=true`** (**`podnoir doctor`** + **`kubectl` report** — same path as **`make playtest-smoke-ci`**).
 
 Release images take **`VERSION` / `COMMIT`** from Docker build args (Compose passes `VERSION` and `GIT_COMMIT` from `make` / your shell).

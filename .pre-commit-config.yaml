@@ -1,0 +1,21 @@
+# Install: pip install pre-commit && pre-commit install
+# Optional env: SKIP_PLAYTEST_SMOKE=1 — skip cluster smoke on commits
+fail_fast: false
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: podnoir-playtest-smoke
+        name: podnoir playtest smoke (skips without Docker+kube)
+        entry: scripts/pre-commit-playtest.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-commit]
+        verbose: true

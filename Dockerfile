@@ -29,5 +29,13 @@ FROM golang:1.23-bookworm AS dev
 WORKDIR /src
 COPY go.mod go.sum* ./
 RUN go mod download
+# kubectl — same pin as runtime; used by playtest-smoke-ci in-container (host may have no kubectl / wrong arch binary)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+	&& ARCH=$(dpkg --print-architecture) \
+	&& case "$ARCH" in amd64) KARCH=amd64 ;; arm64) KARCH=arm64 ;; *) echo "unsupported arch: $ARCH" && exit 1 ;; esac \
+	&& curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/v1.29.13/bin/linux/${KARCH}/kubectl" \
+	&& install -m 0755 /tmp/kubectl /usr/local/bin/kubectl \
+	&& rm /tmp/kubectl \
+	&& apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 COPY . .
 CMD ["go", "test", "./..."]

@@ -1,10 +1,11 @@
 # Playtest checklist
 
-Use this for **spot-checking gameplay** without walking all scenarios. Pair with **`make playtest-smoke`** (cluster reachability) and **`make test`** (automated).
+Use this for **spot-checking gameplay** without walking all scenarios. Pair with **`make playtest-smoke`** (cluster reachability) and **`make test`** (automated). CI and **`make playtest-smoke-ci`** use the same **`doctor` + kubectl report** (**`CI=true`** in the script; local parity runs **in Docker** via **`docker-compose.yml`**).
 
 ## Before you start
 
-- [ ] Cluster reachable: `make playtest-smoke` passes **`podnoir doctor`**.
+- [ ] Cluster reachable: `make playtest-smoke` passes **`podnoir doctor`**, or **`make playtest-smoke-ci`** (build + smoke in Docker, no host Go).
+- [ ] Optional: **`pre-commit install`** — the **playtest hook** prints **skip** reasons (no Docker / no kube / offline) instead of failing silently; set **`SKIP_PLAYTEST_SMOKE=1`** to bypass.
 - [ ] Optional: `make test` and `make lint-docker` green after your changes.
 - [ ] Mock LLM is fine for flow testing: default `POD_NOIR_LLM_PROVIDER=mock` (or unset).
 

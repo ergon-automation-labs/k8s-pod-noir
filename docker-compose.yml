@@ -77,6 +77,38 @@ services:
     working_dir: /src
     command: ["go", "test", "-count=1", "./..."]
 
+  # Same checks as CI integration "Playtest smoke" — build bin/podnoir in-container, then CI=true smoke (no host Go).
+  playtest-smoke-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    image: pod-noir:dev-local
+    pull_policy: build
+    volumes:
+      - .:/src
+      - ${HOME}/.kube:/root/.kube:ro
+    working_dir: /src
+    environment:
+      VERSION: ${VERSION:-dev}
+      GIT_COMMIT: ${GIT_COMMIT:-none}
+      CI: "true"
+      KUBECONFIG: /root/.kube/config
+      POD_NOIR_KUBE_IN_DOCKER: ${POD_NOIR_KUBE_IN_DOCKER:-true}
+      POD_NOIR_KUBE_API_HOST: ${POD_NOIR_KUBE_API_HOST:-}
+      POD_NOIR_KUBE_TLS_INSECURE: ${POD_NOIR_KUBE_TLS_INSECURE:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - bash
+      - -ec
+      - |
+        mkdir -p bin
+        CGO_ENABLED=0 go build -trimpath \
+          -ldflags="-s -w -X podnoir/internal/version.Version=$${VERSION:-dev} -X podnoir/internal/version.Commit=$${GIT_COMMIT:-none}" \
+          -o bin/podnoir ./cmd/podnoir
+        exec bash scripts/playtest-smoke.sh
+
   # Same checks as CI job "lint" — for hosts without local Go (gofmt, go vet, embedded YAML test).
   lint:
     build:

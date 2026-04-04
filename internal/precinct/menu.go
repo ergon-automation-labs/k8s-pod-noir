@@ -105,7 +105,7 @@ func SelectCase(in io.Reader, out io.Writer, detective string, st *store.Store) 
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, FileCabinetList(st))
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "Pick a folder [1–%d], paste a case id, or quit to leave.\n\n", len(scenario.List()))
+	fmt.Fprintf(out, "Pick a folder [1–%d], paste a case id, or walk away before the phone rings.\n\n", len(scenario.List()))
 
 	sc := bufio.NewScanner(in)
 	for {

@@ -11,7 +11,7 @@ RUN_EXTRA ?=
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 
-.PHONY: help build run compile test lint-docker smoke playtest-smoke build-native clean ensure-bin-dir manifests-lint lint
+.PHONY: help build run compile test lint-docker smoke playtest-smoke playtest-smoke-ci build-native clean ensure-bin-dir manifests-lint lint
 
 help:
 	@echo "make build        - Build runtime image (pod-noir:local)"
@@ -21,6 +21,7 @@ help:
 	@echo "                 RUN_EXTRA='-scenario case-002-...' skips menu / picks case directly"
 	@echo "make smoke        - podnoir doctor (cluster connectivity check in Docker)"
 	@echo "make playtest-smoke - doctor + optional host kubectl checks; see docs/playtest-checklist.md"
+	@echo "make playtest-smoke-ci - integration parity: build + CI smoke in Docker (no host Go)"
 	@echo "make compile      - Produce ./bin/podnoir (Linux binary via Go container)"
 	@echo "make build-native - go build ./cmd/podnoir (requires local Go)"
 	@echo "make manifests-lint - validate embedded scenario YAML parses"
@@ -50,6 +51,11 @@ smoke:
 
 playtest-smoke:
 	@./scripts/playtest-smoke.sh
+
+# Matches .github/workflows integration "Playtest smoke" step — same script path as CI (build inside dev image).
+playtest-smoke-ci:
+	@echo "Running playtest-smoke (CI parity) in Docker..."
+	VERSION=$(VERSION) GIT_COMMIT=$(GIT_COMMIT) $(COMPOSE) run --rm playtest-smoke-ci
 
 ensure-bin-dir:
 	@mkdir -p bin
