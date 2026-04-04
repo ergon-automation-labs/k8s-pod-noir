@@ -13,7 +13,7 @@ import (
 const DefaultVictoryTimeout = 90 * time.Second
 
 // VictoryForDefinition checks rollout or endpoints depending on scenario.VictoryMode.
-func VictoryForDefinition(ctx context.Context, r *Runner, ns string, d *scenario.Definition, timeout time.Duration) error {
+func VictoryForDefinition(ctx context.Context, r Kube, ns string, d *scenario.Definition, timeout time.Duration) error {
 	if timeout <= 0 {
 		timeout = DefaultVictoryTimeout
 	}
@@ -42,7 +42,7 @@ func VictoryForDefinition(ctx context.Context, r *Runner, ns string, d *scenario
 	}
 }
 
-func waitEndpointsReady(ctx context.Context, r *Runner, ns, svc string, timeout time.Duration) error {
+func waitEndpointsReady(ctx context.Context, r Kube, ns, svc string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for {
 		out, err := r.Run(ctx, "get", "endpoints", svc, "-n", ns, "-o", "jsonpath={.subsets[*].addresses[*].ip}")

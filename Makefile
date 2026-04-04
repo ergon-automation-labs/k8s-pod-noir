@@ -11,11 +11,12 @@ RUN_EXTRA ?=
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 
-.PHONY: help build run compile test lint-docker smoke playtest-smoke playtest-smoke-ci git-hooks build-native clean ensure-bin-dir manifests-lint lint
+.PHONY: help build run compile test test-session lint-docker smoke playtest-smoke playtest-smoke-ci git-hooks build-native clean ensure-bin-dir manifests-lint lint
 
 help:
 	@echo "make build        - Build runtime image (pod-noir:local)"
 	@echo "make test         - CI parity: go test ./... via Docker Compose"
+	@echo "make test-session - go test ./internal/session/... only (faster REPL iteration; CI still runs full make test)"
 	@echo "make lint-docker  - CI parity: gofmt + go vet + manifests-lint via Docker (no local Go needed)"
 	@echo "make run          - File cabinet menu then REPL; ~/.kube mounted; kube-in-Docker env rewrites API host"
 	@echo "                 RUN_EXTRA='-scenario case-002-...' skips menu / picks case directly"
@@ -42,6 +43,10 @@ compile: ensure-bin-dir
 test:
 	@echo "Running go test in Docker..."
 	$(COMPOSE) run --rm test
+
+test-session:
+	@echo "Running session package tests in Docker..."
+	$(COMPOSE) run --rm test go test -count=1 ./internal/session/...
 
 lint-docker:
 	@echo "Running lint in Docker (same as CI lint job)..."

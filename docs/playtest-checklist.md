@@ -2,6 +2,35 @@
 
 Use this for **spot-checking gameplay** without walking all scenarios. Pair with **`make playtest-smoke`** (cluster reachability) and **`make test`** (automated). CI and **`make playtest-smoke-ci`** use the same **`doctor` + kubectl report** (**`CI=true`** in the script; local parity runs **in Docker** via **`docker-compose.yml`**).
 
+## Suggested first run (~10–15 min)
+
+- **Case:** **`case-001-overnight-shift`** — clearest mock **HOT** path, rollout undo / patch story, field notes on **`observe`** / **`examine`**. Good default when someone asks “which folder should I open first?”
+- **Command:** `make run RUN_EXTRA='-scenario case-001-overnight-shift'` (after **`make smoke`** looks good).
+- **Goal:** complete the minimal loop below once before rotating harder cases (policy / NetworkPolicy / PVC rows).
+
+### Mock `accuse` on case-001 (why “warm” happens)
+
+With the default **mock** LLM (`POD_NOIR_LLM_PROVIDER=mock` or unset), **`accuse` is scored against keyword lists**, not open-ended “grading.” For **case-001** specifically see **`internal/llm/mock.go`** (`HotHints` for `Case001` and `accusationHot`):
+
+- **HOT** if your theory **includes `settings.json`**, *or* your lowercased text matches **two or more** of the case **HotHints** substrings (`settings.json`, `config`, `entrypoint`, `/app/config`, `missing file`, `start.sh`). Each distinct hint phrase counts once.
+- **Warm** if you match **exactly one** HotHint (e.g. only “missing file”) — the reply is nudging you to name the mechanism more tightly.
+- **Cold** if you’re not matching those cues yet (or you’re only hitting **WarmHints** like “crash” without hot cues — different branch).
+
+So a line like **“missing file”** alone is *supposed* to read as warm: you’re in the right neighborhood; add **`settings.json`** and/or a second cue (e.g. **`entrypoint`** + **`config`**) to earn **HOT** and unlock **`solve`**. With a **real** HTTP LLM, tone differs but you still want a concrete theory aligned with evidence.
+
+## If you’re stuck (too hard, thin clues, or rusty kubectl)
+
+The game is meant to be **harder than a tutorial** but not a dead end.
+
+1. **Change folders** — **`quit`** (cleanup) and open **`case-001-overnight-shift`** or another **001–005** row before **008–010** (quota / PVC / NetworkPolicy need more pattern recognition). See the scenario table above.
+2. **`help`** — full REPL command list; **`status`** — what you’ve logged this session (notes, accused/hot/solve flags, contact flags).
+3. **`hint`** — wire **roster**: who’s locked, what behavior unlocks them (**Senior** after logs+trace or a non-HOT **accuse**; **Sysadmin** after **examine pod**; **Network** after **trace**; **Archivist** after **dossier**). Then **`hint senior`**, **`hint sysadmin`**, etc., when open — **one** message per contact per case.
+4. **Treat `accuse` as a dial, not a verdict** — **cold** / **warm** tell you to gather different evidence or tighten wording; iterate. **HOT** unlocks **solve**. On **mock**, each case uses **HotHints** substring scoring (see **“Mock accuse on case-001”** above); a real LLM is looser but still expects evidence-shaped theories.
+5. **After HOT, enter `solve`** — the desk prints **SolveHints** (precinct-safe angles for that case).
+6. **First-time field notes** — the first **`observe`** / **`examine pod`** in a scenario can surface a short in-world teaching beat.
+7. **If kubectl itself feels opaque** — POD noir assumes you can run basic **`kubectl`** (see **[docs/setup.md](setup.md)** and **[docs/pod-noir-northstar.md](pod-noir-northstar.md)** § audience). A short refresher on pods, events, and **`describe`** elsewhere is fair prep; the REPL is not a substitute for that baseline.
+8. **Debrief after the cluster is healthy** — the mock debrief’s **“what to study”** block points at concepts to revisit even when you struggled mid-case.
+
 ## Before you start
 
 - [ ] Cluster reachable: `make playtest-smoke` passes **`podnoir doctor`**, or **`make playtest-smoke-ci`** (build + smoke in Docker, no host Go).

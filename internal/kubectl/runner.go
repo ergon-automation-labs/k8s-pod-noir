@@ -78,6 +78,15 @@ func (r *Runner) RolloutStatus(ctx context.Context, namespace, deployment string
 	return err
 }
 
+// KubeContext returns the kubeconfig context name (may be empty).
+func (r *Runner) KubeContext() string { return r.Context }
+
+// KubeconfigPath returns the kubeconfig file path (may be empty).
+func (r *Runner) KubeconfigPath() string { return r.Kubeconfig }
+
+// Compile-time check that *Runner implements Kube.
+var _ Kube = (*Runner)(nil)
+
 func kubeArgs(context string, args []string) []string {
 	if context == "" {
 		return append([]string{}, args...)

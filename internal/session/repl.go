@@ -11,8 +11,8 @@ func (s *Session) rememberSolveLine(user string) {
 	if ln != "kubectl" && !strings.HasPrefix(ln, "kubectl ") {
 		ln = "kubectl " + ln
 	}
-	if s.Kube.Context != "" {
-		ln = strings.Replace(ln, "kubectl ", "kubectl --context="+s.Kube.Context+" ", 1)
+	if s.Kube != nil && s.Kube.KubeContext() != "" {
+		ln = strings.Replace(ln, "kubectl ", "kubectl --context="+s.Kube.KubeContext()+" ", 1)
 	}
 	s.lastSolveKubectl = ln
 }

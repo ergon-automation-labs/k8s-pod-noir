@@ -39,6 +39,15 @@ Jump a case directly:
 make run RUN_EXTRA='-scenario case-001-overnight-shift'
 ```
 
+### First ~10 minutes (onboarding path)
+
+1. **`make smoke`** — confirm the binary reaches the API (`doctor`).
+2. **Open one training case** — start with **`case-001-overnight-shift`**: it has explicit mock **HOT** hints, rollout-shaped fixes, and field notes tuned for first contact with the loop.
+3. **Run with the case pinned** (skips the file cabinet):  
+   `make run RUN_EXTRA='-scenario case-001-overnight-shift'`
+4. **Minimal loop:** read the briefing → **`observe`** → **`examine pod`** / **`check logs`** / **`trace`** (pick one) → **`accuse`** (aim for **HOT**) → **`solve`** → fix the workload → **`debrief`** → **`quit`**. Same rhythm is spelled out in **[docs/playtest-checklist.md](docs/playtest-checklist.md)**.
+5. **While hacking on the REPL**, **`make test-session`** runs only **`internal/session`** tests in Docker (faster than **`make test`**); CI still runs the full suite.
+
 **Local API (`127.0.0.1` / `localhost`):** Compose mounts `~/.kube` and can rewrite the server URL for `host.docker.internal`. If the phone doesn’t ring, point that context at `https://host.docker.internal:6443` (or your gateway). Details in `docker-compose.yml` and `make help`.
 
 **Linux ELF on disk:** `make compile` writes `./bin/podnoir` via the dev image (architecture matches the container—e.g. `linux/arm64` on Apple Silicon). Run it where that ELF runs, or stay in the runtime image with **`make run`**.
@@ -124,7 +133,7 @@ Tone, learning loop, and non-goals live in **[docs/pod-noir-northstar.md](docs/p
 
 - **`make playtest-smoke`** — `podnoir doctor` plus optional host **`kubectl`** checks (Compose locally; see script for skip env vars).
 - **`make playtest-smoke-ci`** — same **`doctor` + kubectl report** as the **integration** job, **inside Docker** (builds `./bin/podnoir` in the dev image — no host **Go** required).
-- **[docs/playtest-checklist.md](docs/playtest-checklist.md)** — a **small scenario matrix** and a tight loop so you don’t have to play every folder before a release.
+- **[docs/playtest-checklist.md](docs/playtest-checklist.md)** — a **small scenario matrix**, a tight loop, and **what to do if you’re stuck** (easier cases, **`hint`** / contacts, **`accuse`** as iteration, skills floor).
 
 **Git hooks (optional):** the tracked directory **[`githooks/`](githooks/)** (not a dot-folder — it is part of the repo). Once per clone, run **`make git-hooks`** or **`./scripts/setup-git-hooks.sh`** to set **`git config core.hooksPath githooks`**. **`githooks/pre-commit`** and **`githooks/pre-push`** both delegate to **`scripts/pre-commit-playtest.sh`** and run **`playtest-smoke`** when **Docker**, **`kubectl`**, and a **reachable cluster** exist; otherwise they **print a skip reason** and exit **0**. **pre-push** runs the same check on **`git push`**, so smoke still runs if you skipped the commit hook (**`git commit --no-verify`** or **`SKIP_PLAYTEST_SMOKE=1`**). Set **`SKIP_PLAYTEST_SMOKE=1`** / **`POD_NOIR_SKIP_PLAYTEST=1`** to silence **both**; use **`git push --no-verify`** only to bypass the **push** hook. **[`.pre-commit-config.yaml`](.pre-commit-config.yaml)** is for optional **`pre-commit run`** (whitespace etc.) — not the playtest hooks.
 
@@ -134,6 +143,7 @@ Tone, learning loop, and non-goals live in **[docs/pod-noir-northstar.md](docs/p
 make lint-docker    # same as CI **lint** job, inside Docker (no local Go required)
 make lint           # gofmt + go vet + embedded YAML test (local Go 1.23+)
 make test           # go test ./... in Docker (matches CI **test** job)
+make test-session   # go test ./internal/session/... only (faster; CI still runs full **make test**)
 make manifests-lint # embedded scenario manifests must parse as YAML
 make compile        # ./bin/podnoir via Compose (Linux ELF; see above)
 make playtest-smoke    # doctor + optional kubectl (see Playtesting)
@@ -141,6 +151,8 @@ make playtest-smoke-ci # integration parity: build + smoke in Docker (no host Go
 make git-hooks         # core.hooksPath=githooks (pre-commit + pre-push playtest)
 make help
 ```
+
+**REPL tests:** session code uses the **`kubectl.Kube`** interface (`*kubectl.Runner` in production); unit tests fake kubectl for **`observe`** / **`trace`**, mock **accuse → solve**, precinct blocks in **solve** mode, and **debrief** (victory stub). **`help`** copy is **`internal/session/testdata/repl_help.golden`** (embedded at build time; update with **`POD_NOIR_UPDATE_REPL_HELP_GOLDEN=1`**). Victory checks are also covered in **`internal/kubectl/victory_test.go`**.
 
 Contributors: **[AGENTS.md](AGENTS.md)**. **What shipped:** **[PROGRESS.md](PROGRESS.md)** and **[docs/progress/](docs/progress/)**.
 

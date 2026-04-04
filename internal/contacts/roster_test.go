@@ -7,11 +7,11 @@ import (
 
 func TestWireRoster(t *testing.T) {
 	inv := &InvestigationState{
-		SeniorDetectiveUnlocked:        true,
-		SeniorHintDelivered:            false,
-		SysadminUnlocked:               false,
-		NetworkEngineerUnlocked:        true,
-		NetworkEngineerHintDelivered:   true,
+		SeniorDetectiveUnlocked:      true,
+		SeniorHintDelivered:          false,
+		SysadminUnlocked:             false,
+		NetworkEngineerUnlocked:      true,
+		NetworkEngineerHintDelivered: true,
 	}
 	out := WireRoster(inv)
 	if out == "" {

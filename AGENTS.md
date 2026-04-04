@@ -27,6 +27,7 @@ Four **wire-room** personas are implemented: **Senior Detective** (`hint senior`
 ## Build & test (no local Go)
 
 - **`make test`** — `go test ./...` inside Docker Compose (matches CI **test**).
+- **`make test-session`** — `go test ./internal/session/...` only (faster when iterating on REPL/session code; CI still runs the full **`make test`**). Session tests use a **`kubectl.Kube` fake** (`internal/session/kube_fake_test.go`) for **`observe`** / **`trace`** / debrief victory stubs; **`help`** text is **`internal/session/testdata/repl_help.golden`** (see **`POD_NOIR_UPDATE_REPL_HELP_GOLDEN`** in **`help_test.go`**).
 - **`make lint-docker`** — gofmt + `go vet` + embedded YAML test in Docker (matches CI **lint**).
 - **`make compile`** — Linux `bin/podnoir` via Compose.
 - **`make run`** — interactive REPL; see [`README.md`](README.md) for kube-in-Docker.

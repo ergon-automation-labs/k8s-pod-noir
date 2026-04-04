@@ -26,7 +26,7 @@ type Session struct {
 	Out io.Writer
 	In  io.Reader
 
-	Kube      *kubectl.Runner
+	Kube      kubectl.Kube
 	Def       *scenario.Definition
 	Store     *store.Store
 	SessID    int64
@@ -58,7 +58,7 @@ type Session struct {
 }
 
 // New creates a session, applies scenario manifests, and registers persistence.
-func New(ctx context.Context, kube *kubectl.Runner, st *store.Store, def *scenario.Definition, detective, ns string, out io.Writer, in io.Reader, cleanup func(), emitter events.Emitter, llmProvider llm.Provider) (*Session, error) {
+func New(ctx context.Context, kube kubectl.Kube, st *store.Store, def *scenario.Definition, detective, ns string, out io.Writer, in io.Reader, cleanup func(), emitter events.Emitter, llmProvider llm.Provider) (*Session, error) {
 	cctx, cancel := context.WithCancel(ctx)
 	if emitter == nil {
 		emitter = events.StdoutEmitter{W: os.Stdout}
@@ -211,44 +211,7 @@ func (s *Session) handle(line string) error {
 
 	switch {
 	case low == "help" || low == "?":
-		fmt.Fprintln(s.Out, strings.TrimSpace(`
-Commands:
-  observe                         pod list + recent events in the case namespace
-  examine pod <name>              kubectl describe pod
-  check logs <name>               kubectl logs (tail)
-  trace <name>                    pod/deployment chain + rollout history
-  accuse <hypothesis>             commit theory (mock LLM judgment)
-  solve                           enter kubectl mode (requires HOT accusation)
-  status                          case file notes
-  cabinet, files                 glance back at the file drawer (other cases)
-  dossier                       your local case-folder history (cleared counts)
-  hist, history                 last dozen commands this session
-  debrief                       close the case once the cluster looks healthy (mock)
-  hint                            wire roster — who's unlocked vs locked
-  hint senior|sysadmin|network|archivist
-                                take that contact's call (one message per case each)
-  quit                          exit; namespace is cleared (unless -skip-cleanup)
-
-Shortcuts (normal mode):
-  o        observe          t <name>   trace
-  l <pod>  check logs       x <pod>    examine pod
-  l        repeat last logs (after one check logs)
-  r, again repeat last command
-
-Solve mode (examples):
-  case 001: kubectl rollout undo deployment/payments-worker -n pod-noir
-  case 002: kubectl create secret generic ledger-signing-secret -n pod-noir ...
-  case 003: kubectl set image deployment/shipping-notifier notifier=busybox:1.36.1 -n pod-noir
-  case 004: patch/remove livenessProbe on deployment/bedside-console
-  case 005: raise memory limits or fix start command on deployment/memory-witness
-  case 006: kubectl patch service gateway-svc ... selector app=gateway-api
-  case 007: fix or remove failing initContainer on deployment/witness-hold -n pod-noir
-  case 008: raise ResourceQuota or lower deployment requests — ledger-queue -n pod-noir
-  case 009: fix PVC storageClassName / binding — evidence-vol, evidence-worker -n pod-noir
-  case 010: relax NetworkPolicy egress or delete lock-the-door — tape-deck -n pod-noir
-  kubectl patch ... --type=json OR --type=strategic  (see debrief)
-
-Solve mode: r / again repeats last kubectl. Precinct blocks -A, -k/kustomize, namespace delete, cluster admins, taint, etc.; apply -f needs -n and YAML is checked (no other namespace, no cluster-scoped kinds).`))
+		fmt.Fprintln(s.Out, replHelpText())
 		return nil
 	case low == "hist" || low == "history":
 		s.showHistory()
@@ -740,13 +703,13 @@ func (s *Session) execKubectl(user string) ([]byte, error) {
 	if line != "kubectl" && !strings.HasPrefix(line, "kubectl ") {
 		line = "kubectl " + line
 	}
-	if s.Kube.Context != "" {
-		line = strings.Replace(line, "kubectl ", "kubectl --context="+s.Kube.Context+" ", 1)
+	if s.Kube != nil && s.Kube.KubeContext() != "" {
+		line = strings.Replace(line, "kubectl ", "kubectl --context="+s.Kube.KubeContext()+" ", 1)
 	}
 	c := exec.CommandContext(s.ctx, "sh", "-c", line)
 	c.Env = os.Environ()
-	if s.Kube.Kubeconfig != "" {
-		c.Env = append(c.Env, "KUBECONFIG="+s.Kube.Kubeconfig)
+	if s.Kube != nil && s.Kube.KubeconfigPath() != "" {
+		c.Env = append(c.Env, "KUBECONFIG="+s.Kube.KubeconfigPath())
 	}
 	var buf bytes.Buffer
 	c.Stdout = &buf
