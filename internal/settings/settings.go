@@ -24,6 +24,8 @@ type Settings struct {
 	LLMFallbackMock bool
 	// LLMRepairAccuse sends one follow-up when accusation JSON is unparseable (HTTP providers).
 	LLMRepairAccuse bool
+	// LLMContactWire enables HTTP LLM to generate wire-room hint messages (fallback to static copy on error if LLMFallbackMock).
+	LLMContactWire bool
 }
 
 // FromEnv reads POD_NOIR_* variables.
@@ -38,6 +40,7 @@ func FromEnv() Settings {
 		LLMBaseURL:             strings.TrimSpace(os.Getenv("POD_NOIR_LLM_BASE_URL")),
 		LLMFallbackMock:        getenvDefault("POD_NOIR_LLM_FALLBACK_MOCK", "true") != "false",
 		LLMRepairAccuse:        getenvDefault("POD_NOIR_LLM_REPAIR", "true") != "false",
+		LLMContactWire:         getenvDefault("POD_NOIR_LLM_CONTACT_WIRE", "true") != "false",
 		NATSBridge:             getenvDefault("POD_NOIR_NATS_BRIDGE", "false") == "true",
 		NATSBridgeEventsPrefix: strings.TrimSpace(getenvDefault("POD_NOIR_NATS_BRIDGE_EVENTS_PREFIX", "events.pod_noir")),
 	}

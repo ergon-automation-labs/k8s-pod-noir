@@ -128,7 +128,7 @@ func ByID(id ID) (*Definition, error) {
 			ID:                        Case002,
 			Title:                     "The Ghost Credential",
 			Namespace:                 "pod-noir",
-			FolderTease:               "Cutover clean, API never Ready — a name on paper nobody filed",
+			FolderTease:               "Cutover clean on paper — API never Ready; Secret never filed",
 			ApplySteps:                [][]byte{case002},
 			RolloutWaitAfterFirstStep: "",
 			SolveDeployment:           "ledger-api",
@@ -289,7 +289,7 @@ func ByID(id ID) (*Definition, error) {
 			ID:                        Case008,
 			Title:                     "The Red-Tape Room",
 			Namespace:                 "pod-noir",
-			FolderTease:               "The ledger clerk stamped 'insufficient ceiling' — your witness can't get a chair",
+			FolderTease:               "Ledger clerk stamped insufficient ceiling — no chair for your witness",
 			ApplySteps:                [][]byte{case008},
 			RolloutWaitAfterFirstStep: "",
 			SolveDeployment:           "ledger-queue",
@@ -520,9 +520,12 @@ func (d *Definition) Briefing(detective string) string {
 		boxRow(&b, "")
 	default:
 		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
-		boxRow(&b, "THE CLUSTER AGENCY")
-		boxRow(&b, fmt.Sprintf("OPEN FILE — %s", d.Title))
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`OPEN FILE — "%s"`, d.Title))
 		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "Thin routing slip — full briefing not on file yet. The")
+		boxRow(&b, "namespace still answers to the same laws: observe first.")
+		boxRow(&b, "")
 	}
 	boxRow(&b, fmt.Sprintf("Namespace: %s", d.Namespace))
 	boxRow(&b, fmt.Sprintf("Assigned: %s", detective))
@@ -537,7 +540,7 @@ func (d *Definition) CurtainLine() string {
 	case Case001:
 		return "You thumb the edge of the folder. Somewhere a revision number ticks upward like a second hand."
 	case Case002:
-		return "The coffee ring on the form could be a halo or a warning. You open the namespace like a drawer."
+		return "The coffee ring on the form could be a halo or a warning. You crack the namespace like a desk drawer — careful what was never filed."
 	case Case003:
 		return "Harbor lights don't lie — they just don't tell you what's in the container until you look."
 	case Case004:
@@ -551,10 +554,10 @@ func (d *Definition) CurtainLine() string {
 	case Case008:
 		return "The rubber stamp has more authority than the witness — until someone raises the ceiling."
 	case Case009:
-		return "The key fits a lock that was never hung on the wall — the room is real, the door isn't."
+		return "The key fits a lock that was never hung on the wall — StorageClass is the deed; no deed, no door."
 	case Case010:
 		return "The reel turns in the dark; the hallway outside can't hear the subpoena for a name."
 	default:
-		return "The paperclip is bent. The cluster is honest in its own language."
+		return "The paperclip is bent. Whatever lives in this namespace still has to testify — start with observe."
 	}
 }

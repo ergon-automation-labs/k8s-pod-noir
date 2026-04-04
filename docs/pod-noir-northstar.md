@@ -8,7 +8,7 @@
 
 ### What It Is
 
-POD noir is a terminal-based Kubernetes learning surface where engineers investigate procedurally generated incidents on their own cluster, building real debugging intuition through detective work rather than tutorials.
+POD noir is a terminal-based Kubernetes learning surface where engineers investigate **embedded, scenario-driven** incidents on their own cluster, building real debugging intuition through detective work rather than tutorials.
 
 ### The Problem It Solves
 
@@ -102,6 +102,8 @@ You begin each investigation alone with basic observational tools. As you demons
 | **The Archivist** — dry, precise | Historical context: "this pattern appeared in case #7" |
 | **The Senior Detective** — no patience for wrong theories | One blunt, honest hint — but judges your hypothesis first |
 
+**Shipping note:** All four personas are on the **wire** in code: **Senior** (`hint`), **Sysadmin** (`hint sysadmin`), **Network Engineer** (`hint network`), **Archivist** (`hint archivist`). Unlock rules are behavior-based (see README / `internal/contacts/`). Each delivers **one** message per case when unlocked.
+
 Contacts don't appear on a timer. They appear when you've earned them through investigative behavior. The game watches what you're doing.
 
 ### What Carries Between Cases
@@ -170,7 +172,7 @@ Teardown is guaranteed — even on crash, on startup the game checks for and cle
 
 ### Failure Taxonomy
 
-Failures are organized by layer. The scenario generator picks a layer, picks a failure mode, and injects it via broken manifests into the controlled namespace.
+Failures are organized by layer. Each **scenario** ships fixed manifests that encode a failure mode into the controlled namespace (not generated at runtime).
 
 **Scheduling**
 - Resource requests exceed available node capacity
@@ -214,7 +216,7 @@ Failures are organized by layer. The scenario generator picks a layer, picks a f
 
 | Point | Role |
 |---|---|
-| Session start | Generate incident narrative from scenario parameters |
+| Session start | Optional framing / atmosphere (embedded scenarios supply the failure mode) |
 | `observe` / `examine` | Surface observations contextually from kubectl output |
 | `accuse` | Evaluate hypothesis, respond in character |
 | Contact interactions | NPC dialogue, qualitatively different per contact |
@@ -294,37 +296,39 @@ detective:
 
 ## 7. Roadmap
 
-### MVP — Smallest Playable Thing
+Roadmap is **intent**, not a promise date. For **what the repo actually does today**, see README, AGENTS, and code. **Embedded scenarios** (fixed YAML) are the product; procedural generation is out of scope unless that changes in **[architecture-decisions.md](architecture-decisions.md)**.
 
-- Single namespace, clean teardown guarantee
-- 3 failure scenarios (one scheduling, one runtime, one config)
-- Core REPL verbs: `observe`, `examine`, `check logs`, `accuse`, `solve`, `debrief`
-- LLM generates incident narrative and evaluates hypothesis
-- `status` case file auto-populated
-- stdout event adapter
-- Single NPC: the Senior Detective (hint system)
-- Basic case history log
+### Current — shipping (snapshot)
 
-### Phase 2 — The World
+These are **in the codebase** as of the last northstar refresh:
 
-- Full failure taxonomy implemented
-- Difficulty levels 1–5
-- All four contacts with distinct personalities
-- Contact unlock logic (behavior-triggered)
-- NATS adapter
-- Detective rank system (narrative, not mechanical)
-- Case file history across sessions
+- **Cluster contract:** dedicated namespace (`pod-noir` by default); apply/teardown; optional `-skip-cleanup`.
+- **Scenarios:** **10** embedded cases covering rollout/config drift, missing Secret/`secretKeyRef`, bad image tag/pull, probe/port mismatch, memory/tmpfs OOM, Service selector vs Pod labels (empty endpoints), failing initContainer, ResourceQuota vs requests, PVC/StorageClass Pending, NetworkPolicy egress/DNS.
+- **Session loop:** REPL investigative verbs, **accuse** (mock rules or HTTP LLM: cold / warm / hot), **solve** sub-mode with **precinct** kubectl policy, **debrief** (per-scenario mock text; generative debrief when LLM configured).
+- **Contacts:** **four** wire-room NPCs — bare **`hint`** prints a **roster** (locked / open / done); **`hint senior`** (unlock: logs+trace or non-HOT **accuse**), **`hint sysadmin`** (unlock: **examine pod**), **`hint network`** (unlock: **trace**), **`hint archivist`** (unlock: **dossier** this session). **Per-scenario** authored wire copy for each NPC; one delivered message per contact per case.
+- **Persistence:** SQLite **dossier** / history under `~/.pod-noir` (and related store).
+- **Events:** **stdout** default; **NATS** (`POD_NOIR_EVENTS_ADAPTER`, optional bridge envelope to `events.pod_noir.*`).
+- **LLM:** **mock** (no network); **Anthropic**, **OpenAI**, **Ollama** via configuration. Optional **LLM-generated wire-room `hint` messages** (with static copy as anchor and fallback); env **`POD_NOIR_LLM_CONTACT_WIRE`**.
+- **Ops / quality:** CI **lint → Docker test → kind integration** including `playtest-smoke`; optional **git hooks** (`core.hooksPath=githooks`) for local smoke; **`podnoir doctor`** for reachability.
 
-### Phase 3 — Open Source Ready
+### Near term — next improvements
 
-- Full failure taxonomy including composed failures (level 6+)
-- Webhook adapter
-- Ollama and OpenAI provider support
-- Contribution guide
-- Scenario authoring guide (community can add failure scenarios)
-- Public repo, clean OSS packaging
+- **Docs:** contributor guide; **scenario authoring** note (how to add embedded manifests + `scenario.Definition` + briefing copy).
+- **Scenarios:** more cases, **composed** or **multi-signal** failures (hard mode), rotating the matrix in **[docs/playtest-checklist.md](playtest-checklist.md)**.
+- **Contacts:** richer per-scenario wire copy for **Sysadmin / Network / Archivist** (beyond current defaults + key cases), optional fifth persona, or LLM-generated contact lines.
+- **Events:** **HTTP webhook** emitter (listed in §5 architecture; not yet first-class in the same way as stdout/NATS).
+- **Polish:** difficulty labels or tags per scenario (optional; learning value over grind).
 
----
+### Horizon — larger bets
+
+- **LLM at session start:** optional atmospheric framing *on top of* fixed manifests (manifests still define the break).
+- **Narrative progression:** detective rank or cross-case arc — **lightweight**, story-forward, not a stat treadmill.
+- **Taxonomy depth:** “level 6+” composed/cascading failures as optional paths for players who cleared the core set.
+
+### Explicit non-goals (for now)
+
+- **Runtime-procedural** scenario generation replacing embedded YAML.
+- **Multiplayer** or shared cluster competition.
 
 ---
 
@@ -1536,5 +1540,17 @@ EVIDENCE — worker-us-west-2a-01
 
 ---
 
-*Last updated: 2026-04-01*
-*Status: Draft — Identity, Learning Model, World, REPL, Architecture, OSS Posture, Roadmap, Sample Investigations (5 cases)*
+---
+
+## Document governance & maintenance
+
+**This file** is the product constitution. Update it when **identity**, **learning model**, **world tone**, **REPL contract**, or **cluster/namespace behavior** change in ways that affect what players experience or what contributors assume. Follow **`.cursor/rules/northstar-sync.mdc`**.
+
+**Sweeping** system or contributor-contract changes (solve policy, precinct rules, session lifecycle, CI game contract, hooks strategy, LLM wiring) also get a row in **[architecture-decisions.md](architecture-decisions.md)**. Routine scenario tweaks and small fixes use **progress** bullets only.
+
+Roadmap sections below describe **direction**; **current** scenario count, verbs, and tooling are defined by the repo (**README**, **AGENTS**, code).
+
+---
+
+*Last updated: 2026-04-02*
+*Status: Living — Identity, Learning Model, World, REPL, Architecture, OSS Posture, Roadmap; sample investigations illustrative; governance + AD log for accuracy*

@@ -1,0 +1,38 @@
+---
+description: Keep docs/pod-noir-northstar.md and docs/architecture-decisions.md aligned with product behavior
+alwaysApply: true
+---
+
+# North star & architecture decisions (pod-noir)
+
+The **constitution** is **[docs/pod-noir-northstar.md](docs/pod-noir-northstar.md)**. The **decision log** is **[docs/architecture-decisions.md](docs/architecture-decisions.md)**. Update them in the **same task** when behavior or intent changes materially—do not defer to a “docs pass later.”
+
+## Update **northstar** when you change
+
+- **Identity / learning model** — who it’s for, observe→accuse→solve loop, success criteria.
+- **World & tone** — Cluster Agency framing, contacts, what carries between cases.
+- **REPL contract** — verb set, solve/debrief rules, precinct policy *as product promises*.
+- **Cluster contract** — namespace ownership, teardown, what “real cluster” means for players.
+
+Edit the relevant **section**; refresh the **footer** `Last updated` date. If the change contradicts an older **Roadmap** bullet, add a one-line **accuracy note** in the governance block or adjust the roadmap row.
+
+## Append **architecture-decisions.md** when you make *sweeping* changes
+
+Add a **new table row** when the change affects **system-wide behavior** or **contributor contracts**, for example:
+
+- Solve mode / precinct / kubectl guardrails
+- Session lifecycle, namespace apply/teardown, victory checks
+- CI integration contract (what must pass on main)
+- Git hooks strategy (`core.hooksPath`, smoke hooks)
+- LLM provider contract (mock vs HTTP, required env)
+
+**Do not** log every bugfix or single-scenario tweak—use **progress** bullets for that.
+
+## If only copy / one scenario / internal refactor
+
+Say briefly that northstar/AD are unchanged (e.g. “Northstar unchanged—single-case copy only”).
+
+## Cross-links
+
+- **[readme-sync.mdc](readme-sync.mdc)** — player-facing README when run paths change.
+- **[progress-sync.mdc](progress-sync.mdc)** — shipped work log.

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -223,7 +224,9 @@ Commands:
   dossier                       your local case-folder history (cleared counts)
   hist, history                 last dozen commands this session
   debrief                       close the case once the cluster looks healthy (mock)
-  hint                          Senior Detective when unlocked (logs+trace or non-HOT accuse)
+  hint                            wire roster — who's unlocked vs locked
+  hint senior|sysadmin|network|archivist
+                                take that contact's call (one message per case each)
   quit                          exit; namespace is cleared (unless -skip-cleanup)
 
 Shortcuts (normal mode):
@@ -272,8 +275,16 @@ Solve mode: r / again repeats last kubectl. Precinct blocks -A, -k/kustomize, na
 		return s.enterSolve()
 	case low == "status":
 		return s.status()
-	case low == "hint":
-		return s.hint()
+	case strings.HasPrefix(low, "hint"):
+		fields := strings.Fields(line)
+		if len(fields) == 1 {
+			return s.hintWireRoster()
+		}
+		id, err := contacts.ParseHintTarget(fields[1])
+		if err != nil {
+			return err
+		}
+		return s.hintWithTarget(id)
 	case low == "cabinet" || low == "files":
 		fmt.Fprintln(s.Out, precinct.CabinetPeek(s.Def, s.Store))
 		return nil
@@ -326,7 +337,13 @@ func (s *Session) examinePod(name string) error {
 		fmt.Fprintln(s.Out)
 		fmt.Fprintln(s.Out, strings.TrimSpace(s.Def.FieldNoteAfterExamine))
 	}
-	return s.logNote("examine", "Described pod "+name)
+	if err := s.logNote("examine", "Described pod "+name); err != nil {
+		return err
+	}
+	if contacts.SeniorPath(s.Def) {
+		s.tryUnlockSysadmin("examine_pod")
+	}
+	return nil
 }
 
 func (s *Session) checkLogs(name string) error {
@@ -449,8 +466,14 @@ func (s *Session) status() error {
 	}
 	fmt.Fprintf(s.Out, "  • accused=%v hot=%v solveMode=%v\n", s.accused, s.hotAccusation, s.solveMode)
 	if contacts.SeniorPath(s.Def) {
-		fmt.Fprintf(s.Out, "  • senior_detective_unlocked=%v hint_delivered=%v\n",
+		fmt.Fprintf(s.Out, "  • senior_detective unlocked=%v hint_delivered=%v\n",
 			s.inv.SeniorDetectiveUnlocked, s.inv.SeniorHintDelivered)
+		fmt.Fprintf(s.Out, "  • sysadmin unlocked=%v hint_delivered=%v\n",
+			s.inv.SysadminUnlocked, s.inv.SysadminHintDelivered)
+		fmt.Fprintf(s.Out, "  • network_engineer unlocked=%v hint_delivered=%v\n",
+			s.inv.NetworkEngineerUnlocked, s.inv.NetworkEngineerHintDelivered)
+		fmt.Fprintf(s.Out, "  • archivist unlocked=%v hint_delivered=%v\n",
+			s.inv.ArchivistUnlocked, s.inv.ArchivistHintDelivered)
 	}
 	return nil
 }
@@ -498,6 +521,9 @@ after the cluster passed the precinct health check for that scenario.`))
 		fmt.Fprintf(s.Out, "  %s — opened %d×, cleared %d×, last stamp: %s\n",
 			id, f.OpenCount, f.SolvedCount, last)
 	}
+	if contacts.SeniorPath(s.Def) {
+		s.tryUnlockArchivist("dossier")
+	}
 	return nil
 }
 
@@ -509,6 +535,7 @@ func (s *Session) markTraceSeen() {
 	if contacts.SeniorPath(s.Def) {
 		s.inv.SeenTrace = true
 		s.maybeUnlockFromEvidence()
+		s.tryUnlockNetworkEngineer("trace")
 	}
 }
 
@@ -534,7 +561,84 @@ func (s *Session) tryUnlockSeniorDetective(reason string) {
 	_ = s.Store.AddNote(s.ctx, s.SessID, "contact", "Senior Detective unlocked — "+reason)
 }
 
-func (s *Session) hint() error {
+func (s *Session) tryUnlockSysadmin(reason string) {
+	if s.inv.SysadminUnlocked {
+		return
+	}
+	s.inv.SysadminUnlocked = true
+	events.Emit(s.ctx, s.Emitter, events.ContactUnlocked, map[string]any{
+		"contact": string(contacts.Sysadmin),
+		"reason":  reason,
+	})
+	_ = s.Store.AddNote(s.ctx, s.SessID, "contact", "Sysadmin unlocked — "+reason)
+}
+
+func (s *Session) tryUnlockNetworkEngineer(reason string) {
+	if s.inv.NetworkEngineerUnlocked {
+		return
+	}
+	s.inv.NetworkEngineerUnlocked = true
+	events.Emit(s.ctx, s.Emitter, events.ContactUnlocked, map[string]any{
+		"contact": string(contacts.NetworkEngineer),
+		"reason":  reason,
+	})
+	_ = s.Store.AddNote(s.ctx, s.SessID, "contact", "Network Engineer unlocked — "+reason)
+}
+
+func (s *Session) tryUnlockArchivist(reason string) {
+	if s.inv.ArchivistUnlocked {
+		return
+	}
+	s.inv.ArchivistUnlocked = true
+	events.Emit(s.ctx, s.Emitter, events.ContactUnlocked, map[string]any{
+		"contact": string(contacts.Archivist),
+		"reason":  reason,
+	})
+	_ = s.Store.AddNote(s.ctx, s.SessID, "contact", "Archivist unlocked — "+reason)
+}
+
+func (s *Session) hintWireRoster() error {
+	fmt.Fprintln(s.Out, strings.TrimRight(contacts.WireRoster(&s.inv), "\n"))
+	return nil
+}
+
+func (s *Session) hintWithTarget(which contacts.ID) error {
+	switch which {
+	case contacts.SeniorDetective:
+		return s.hintSenior()
+	case contacts.Sysadmin:
+		return s.hintSysadmin()
+	case contacts.NetworkEngineer:
+		return s.hintNetworkEngineer()
+	case contacts.Archivist:
+		return s.hintArchivist()
+	default:
+		return fmt.Errorf("unsupported contact %q", which)
+	}
+}
+
+// resolveContactWire uses HTTP LLM when configured (ContactWirer); otherwise static copy from contacts.
+func (s *Session) resolveContactWire(which contacts.ID) (string, error) {
+	static := contacts.StaticWireMessage(which, s.Def)
+	wc, ok := s.LLM.(llm.ContactWirer)
+	if !ok {
+		return static, nil
+	}
+	out, err := wc.ContactWire(s.ctx, s.Def, string(which), static)
+	if err != nil {
+		if errors.Is(err, llm.ErrUseStaticWire) {
+			return static, nil
+		}
+		return "", err
+	}
+	t := strings.TrimSpace(out)
+	if t == "" {
+		return static, nil
+	}
+	return t, nil
+}
+
+func (s *Session) hintSenior() error {
 	if !s.inv.SeniorDetectiveUnlocked {
 		fmt.Fprintln(s.Out, strings.TrimSpace(`
 The wire's quiet — Senior hasn't picked up yet. Show the work: pull logs,
@@ -546,12 +650,86 @@ accusation opens that line, too — nobody's grading your ego, just your evidenc
 		fmt.Fprintln(s.Out, "The Senior Detective already sent a message this case — see your case file (status).")
 		return nil
 	}
-	fmt.Fprintln(s.Out, strings.TrimSpace(contacts.SeniorDetectiveMessage(s.Def)))
+	text, err := s.resolveContactWire(contacts.SeniorDetective)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(s.Out, "%s\n", text)
 	s.inv.SeniorHintDelivered = true
 	events.Emit(s.ctx, s.Emitter, events.HintDelivered, map[string]any{
 		"contact": string(contacts.SeniorDetective),
 	})
-	return s.logNote("hint", "Senior Detective — stub message delivered")
+	return s.logNote("hint", "Senior Detective — message delivered")
+}
+
+func (s *Session) hintSysadmin() error {
+	if !s.inv.SysadminUnlocked {
+		fmt.Fprintln(s.Out, strings.TrimSpace(`
+The basement line is dead — Sysadmin won't pick up until you've described
+a pod for real (examine pod <name>). They don't do vibes.`))
+		return nil
+	}
+	if s.inv.SysadminHintDelivered {
+		fmt.Fprintln(s.Out, "The sysadmin already sent a message this case — see status.")
+		return nil
+	}
+	text, err := s.resolveContactWire(contacts.Sysadmin)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(s.Out, "%s\n", text)
+	s.inv.SysadminHintDelivered = true
+	events.Emit(s.ctx, s.Emitter, events.HintDelivered, map[string]any{
+		"contact": string(contacts.Sysadmin),
+	})
+	return s.logNote("hint", "Sysadmin — message delivered")
+}
+
+func (s *Session) hintNetworkEngineer() error {
+	if !s.inv.NetworkEngineerUnlocked {
+		fmt.Fprintln(s.Out, strings.TrimSpace(`
+Nobody's on the trunk line — Network won't answer until you've traced a pod
+or deployment (trace <name>) so they know which junction box to curse.`))
+		return nil
+	}
+	if s.inv.NetworkEngineerHintDelivered {
+		fmt.Fprintln(s.Out, "The network engineer already sent a message this case — see status.")
+		return nil
+	}
+	text, err := s.resolveContactWire(contacts.NetworkEngineer)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(s.Out, "%s\n", text)
+	s.inv.NetworkEngineerHintDelivered = true
+	events.Emit(s.ctx, s.Emitter, events.HintDelivered, map[string]any{
+		"contact": string(contacts.NetworkEngineer),
+	})
+	return s.logNote("hint", "Network Engineer — message delivered")
+}
+
+func (s *Session) hintArchivist() error {
+	if !s.inv.ArchivistUnlocked {
+		fmt.Fprintln(s.Out, strings.TrimSpace(`
+The stacks are closed — Archivist doesn't open a file until you've pulled
+your dossier once this session (dossier) so they know you're not wasting
+carbon paper.`))
+		return nil
+	}
+	if s.inv.ArchivistHintDelivered {
+		fmt.Fprintln(s.Out, "The Archivist already sent a message this case — see status.")
+		return nil
+	}
+	text, err := s.resolveContactWire(contacts.Archivist)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(s.Out, "%s\n", text)
+	s.inv.ArchivistHintDelivered = true
+	events.Emit(s.ctx, s.Emitter, events.HintDelivered, map[string]any{
+		"contact": string(contacts.Archivist),
+	})
+	return s.logNote("hint", "Archivist — message delivered")
 }
 
 func (s *Session) execKubectl(user string) ([]byte, error) {

@@ -1,5 +1,8 @@
 # POD noir — local execution against your kubeconfig.
 #
+# Interpolation: ${VAR} values are taken from the shell and from a root-level .env file
+# (Compose loads .env automatically). Copy .env.example to .env. Optional: --env-file path/to/file
+#
 # Kubernetes API is usually on the host (127.0.0.1:6443). Inside the container,
 # use host.docker.internal (Docker Desktop / recent Compose). If connection fails,
 # point your kubeconfig server URL at https://host.docker.internal:6443 for this context.

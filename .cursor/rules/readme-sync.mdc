@@ -36,6 +36,10 @@ When a change affects **how people run, configure, or play** the project—or **
 
 Say so briefly (e.g. “README unchanged—change is internal only”) and skip edits.
 
+## Constitution & sweeping decisions
+
+If the change alters **product intent**, **learning loop**, or **cross-cutting behavior**, also follow **[northstar-sync](northstar-sync.mdc)** and update **`docs/pod-noir-northstar.md`** and/or append **`docs/architecture-decisions.md`** as described there.
+
 ## Shipped work logging
 
 For **feature / scenario / CI / policy** deliveries, also follow **[progress-sync](progress-sync.mdc)** and update **`PROGRESS.md`** + **`docs/progress/YYYY-MM.md`** (keep those files small; fan out detail by month).

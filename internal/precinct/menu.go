@@ -24,6 +24,9 @@ The city never sleeps; the cluster only blinks.
    THE CLUSTER AGENCY  —  Municipal Adjuster Unit (training)
 ================================================================
 
+You already know what objects are called. Here you learn how they fail
+when a manifest promises one thing and the node files a different story.
+
 First day on the floor. Ozone and cooling fans, bitter coffee going
 cold beside a rotary phone that nobody dares answer. Oak filing cabinet
 across the aisle: brass green with age, label crooked — INCIDENT FOLDERS.
@@ -50,7 +53,7 @@ func folderStamp(st *store.Store, id scenario.ID) string {
 func FileCabinetList(st *store.Store) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
-	boxInner(&b, "OPEN FOLDERS — assign yourself a case")
+	boxInner(&b, "OPEN FOLDERS — incident intake (training floor)")
 	fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
 	for i, id := range scenario.List() {
 		def, err := scenario.ByID(id)

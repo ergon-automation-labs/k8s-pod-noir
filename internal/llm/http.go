@@ -25,6 +25,8 @@ type HTTP struct {
 	mock     Mock
 	fallback bool
 	repair   bool
+	// contactWire enables LLM-generated hint sysadmin/network/archivist/senior (see ContactWire).
+	contactWire bool
 }
 
 type completionMode int
@@ -33,6 +35,7 @@ const (
 	modePlain completionMode = iota
 	modeAccuseJSON
 	modeDebrief
+	modeContactWire
 )
 
 const accuseSystemPrompt = `You are a Kubernetes incident examiner in a noir training game.
@@ -79,13 +82,14 @@ func NewHTTP(s settings.Settings) (*HTTP, error) {
 	}
 
 	return &HTTP{
-		kind:     kind,
-		baseURL:  base,
-		apiKey:   apiKey,
-		model:    model,
-		client:   &http.Client{Timeout: 120 * time.Second},
-		fallback: s.LLMFallbackMock,
-		repair:   s.LLMRepairAccuse,
+		kind:        kind,
+		baseURL:     base,
+		apiKey:      apiKey,
+		model:       model,
+		client:      &http.Client{Timeout: 120 * time.Second},
+		fallback:    s.LLMFallbackMock,
+		repair:      s.LLMRepairAccuse,
+		contactWire: s.LLMContactWire,
 	}, nil
 }
 
@@ -203,6 +207,9 @@ func (h *HTTP) anthropic(ctx context.Context, userPrompt string, mode completion
 	case modeDebrief:
 		maxTok = 4096
 		system = "You write clear operational debriefs with a noir tone. Never output JSON for debriefs."
+	case modeContactWire:
+		maxTok = 2048
+		system = contactWireSystemPrompt
 	}
 	body := map[string]any{
 		"model":      h.model,
@@ -264,6 +271,13 @@ func (h *HTTP) openai(ctx context.Context, userPrompt string, mode completionMod
 			{"role": "user", "content": userPrompt},
 		}
 	}
+	if mode == modeContactWire {
+		delete(body, "response_format")
+		body["messages"] = []map[string]string{
+			{"role": "system", "content": contactWireSystemPrompt},
+			{"role": "user", "content": userPrompt},
+		}
+	}
 	b, _ := json.Marshal(body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
 	if err != nil {
@@ -315,6 +329,13 @@ func (h *HTTP) ollama(ctx context.Context, userPrompt string, mode completionMod
 	if mode == modeDebrief {
 		body["messages"] = []map[string]string{
 			{"role": "system", "content": "Write plain-text operational debriefs. Do not output JSON."},
+			{"role": "user", "content": userPrompt},
+		}
+		delete(body, "format")
+	}
+	if mode == modeContactWire {
+		body["messages"] = []map[string]string{
+			{"role": "system", "content": contactWireSystemPrompt},
 			{"role": "user", "content": userPrompt},
 		}
 		delete(body, "format")

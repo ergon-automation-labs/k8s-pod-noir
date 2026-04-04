@@ -131,8 +131,9 @@ func SeniorDetectiveStubMessageDefault() string {
 ─────────────────────────────────────────────────────────────
   [ INCOMING — SENIOR DETECTIVE ]
 
-  "You're not stuck — you're early. Logs, trace, or a theory that isn't
-  on fire yet. The cluster will talk if you ask the right questions."
+  "You're not stuck — you're early. The evidence is already on the wire;
+  you just haven't cross-examined it. Logs, trace, or a cold theory —
+  pick one and make it honest before you patch."
 
   [ message logged ]
 ─────────────────────────────────────────────────────────────`

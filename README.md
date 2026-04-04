@@ -8,12 +8,16 @@ This repo is **[k8s-pod-noir](https://github.com/ergon-automation-labs/k8s-pod-n
 
 You’re not “doing labs.” You’re working the **Cluster Agency** floor: manila folders on the cabinet, rain in the margins of the briefing, a **precinct** that won’t stamp **CLOSED** until the workload stops bleeding. Each **case** is a scenario manifest applied into a dedicated namespace—usually `pod-noir`—with a story that sounds like noir because **fiction gives the debugging stakes a spine**. Underneath it is the same discipline good on-calls use: **look before you patch**, say what you think out loud (**accuse**), then earn **solve mode** and fix the cluster like an adult.
 
+The agency voice is **training**; **`kubectl` output is not**—events, phases, and failures behave like real incidents because they are real cluster state on your context.
+
 The game rewards **observe → hypothesis → fix**. Skip the theory and you’re just typing; nail a **HOT** accusation and the desk unlocks **raw kubectl**—within precinct rules, because the job is to learn, not to melt the cluster.
 
 ## What you need
 
 - A working cluster and **`kubectl`** pointed at the context you intend to use.
 - **Docker** (recommended) **or** Go **1.23+** if you build a binary yourself.
+
+**Greenfield install** (Docker, local cluster, clone, build, run): **[docs/setup.md](docs/setup.md)**.
 
 Opening a case applies workloads into a namespace and tears them down on exit unless you pass **`-skip-cleanup`**.
 
@@ -91,9 +95,13 @@ Type **`help`** for the full command list. Shortcuts in **normal** mode:
 | `r`, `again` | repeat last expanded command (normal) or last successful `kubectl` (solve) |
 | `hist`, `history` | last ~12 commands this session |
 
+**Wire contacts (`hint`):** **`hint`** alone prints the **wire roster** — who’s locked, open, or already spoke, and how to unlock each line. **`hint senior`** (unlocks after logs+trace or a non-HOT **accuse**), **`hint sysadmin`** (unlock: **`examine pod`**), **`hint network`** (unlock: **`trace`**), **`hint archivist`** (unlock: **`dossier`** this session). One delivered message per contact per case; **`status`** mirrors the same flags. With **HTTP LLM** and **`POD_NOIR_LLM_CONTACT_WIRE`** (default on), **`hint`** + contact name can call the model using **authored copy as anchor text**; **`mock`** LLM or **`POD_NOIR_LLM_CONTACT_WIRE=false`** uses static wire only (`internal/contacts/`, `internal/llm/contact_wire.go`).
+
 **Solve mode** is the back alley: real `kubectl` against the case namespace, after a **HOT** accusation. The **precinct** blocks cluster-wide damage (`-A`, namespace deletes, cluster-admin plays, node ops, `taint`, `adm`, **`kustomize` / `-k`**). Mutations with **`-f` / `--filename`** must carry **`-n`** (or `--namespace=...`); manifests are **checked** so namespaces and cluster-scoped kinds can’t smuggle past the story. **`-f -`** and URLs are blocked. **Case desk hints** print when you enter solve. Type **`exit`** to leave solve mode.
 
 ## Environment (`POD_NOIR_*`)
+
+**Docker Compose:** put a **`.env`** file in the **repo root** (next to `docker-compose.yml`). Compose **loads it automatically** for `${VAR}` in **`docker-compose.yml`**—you do not need `env_file:` unless you want extra files. Copy **[`.env.example`](.env.example)** to `.env` and set values; **`.env` is gitignored**. Override file: `docker compose --env-file .env.local …`. Shell exports still win if set before `compose` runs.
 
 | Variable | Role |
 |----------|------|
@@ -105,11 +113,12 @@ Type **`help`** for the full command list. Shortcuts in **normal** mode:
 | `POD_NOIR_LLM_API_KEY`, `POD_NOIR_LLM_MODEL`, `POD_NOIR_LLM_BASE_URL` | Provider credentials / model / base URL. |
 | `POD_NOIR_LLM_FALLBACK_MOCK` | Use mock when HTTP LLM errors (default on unless `false`). |
 | `POD_NOIR_LLM_REPAIR` | After a bad JSON accusation response, one automatic retry (default on unless `false`). |
+| `POD_NOIR_LLM_CONTACT_WIRE` | When using an HTTP LLM (`anthropic` / `openai` / `ollama`), generate **wire-room** `hint` messages; set `false` to always use authored copy. On error, falls back to static copy if `POD_NOIR_LLM_FALLBACK_MOCK` is not `false`. |
 | `POD_NOIR_KUBE_IN_DOCKER`, `POD_NOIR_KUBE_API_HOST`, `POD_NOIR_KUBE_TLS_INSECURE` | Docker ↔ host API rewriting and TLS (see `doctor` output). |
 
 ## Why it exists (design)
 
-Tone, learning loop, and non-goals live in **[docs/pod-noir-northstar.md](docs/pod-noir-northstar.md)**—the constitution for the world this README only introduces.
+Tone, learning loop, and non-goals live in **[docs/pod-noir-northstar.md](docs/pod-noir-northstar.md)**—the constitution for the world this README only introduces. **Sweeping** behavior or architecture choices are logged in **[docs/architecture-decisions.md](docs/architecture-decisions.md)** (append-only).
 
 ## Playtesting
 

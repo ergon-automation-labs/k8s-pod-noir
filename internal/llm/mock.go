@@ -289,7 +289,8 @@ func debriefStatic(def *scenario.Definition) string {
 		return strings.TrimSpace(fmt.Sprintf(`
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #001 — CLOSED                                         │
-│  "The Overnight Shift" (mock LLM debrief)                   │
+│  "The Overnight Shift"                                      │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  Revision 2.1.0 replaced a stable start command with one    │
@@ -316,7 +317,8 @@ func debriefStatic(def *scenario.Definition) string {
 		return strings.TrimSpace(fmt.Sprintf(`
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #002 — CLOSED                                         │
-│  "The Ghost Credential" (mock LLM debrief)                  │
+│  "The Ghost Credential"                                     │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  Deployment ledger-api references secretKeyRef               │
@@ -341,7 +343,8 @@ func debriefStatic(def *scenario.Definition) string {
 		return strings.TrimSpace(fmt.Sprintf(`
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #003 — CLOSED                                         │
-│  "Dead Letter Harbour" (mock LLM debrief)                    │
+│  "Dead Letter Harbour"                                      │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  Container image busybox:9.99.99-noir-invalid-tag does not  │
@@ -363,6 +366,7 @@ func debriefStatic(def *scenario.Definition) string {
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #004 — CLOSED                                         │
 │  "The Wrong Number"                                         │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  livenessProbe httpGet on :8080 but nothing listens —       │
@@ -374,7 +378,7 @@ func debriefStatic(def *scenario.Definition) string {
 │       -p='[{"op":"remove","path":"/spec/template/spec/containers/0/livenessProbe"}]' │
 │  B) Point probe at real HTTP once app serves it             │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → probe fields vs process actually bound                   │
 └─────────────────────────────────────────────────────────────┘`, ns))
 	case scenario.Case005:
@@ -382,6 +386,7 @@ func debriefStatic(def *scenario.Definition) string {
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #005 — CLOSED                                         │
 │  "The Thin Margin"                                          │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  dd fills /dev/shm past memory limit → OOMKilled.           │
@@ -390,7 +395,7 @@ func debriefStatic(def *scenario.Definition) string {
 │  A) Raise memory limits on deployment memory-witness        │
 │  B) Replace start command with harmless sleep only          │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → resources.limits vs OOMKilled / tmpfs                    │
 └─────────────────────────────────────────────────────────────┘`)
 	case scenario.Case006:
@@ -398,6 +403,7 @@ func debriefStatic(def *scenario.Definition) string {
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #006 — CLOSED                                         │
 │  "The Ghost Wire"                                           │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  Service gateway-svc selector app=invoice-frontend; Pods are  │
@@ -407,7 +413,7 @@ func debriefStatic(def *scenario.Definition) string {
 │  kubectl patch service gateway-svc -n %[1]s --type=merge \   │
 │    -p '{"spec":{"selector":{"app":"gateway-api"}}}'          │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → kubectl get endpoints vs get svc -o wide                 │
 └─────────────────────────────────────────────────────────────┘`, ns))
 	case scenario.Case007:
@@ -415,6 +421,7 @@ func debriefStatic(def *scenario.Definition) string {
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #007 — CLOSED                                         │
 │  "Waiting on a Witness"                                     │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  initContainer gate exits 1 — Pod never reaches the app     │
@@ -426,7 +433,7 @@ func debriefStatic(def *scenario.Definition) string {
 │       -p='[{"op":"replace","path":"/spec/template/spec/initContainers/0/command","value":["/bin/sh","-c","exit 0"]}]' │
 │  B) Remove initContainers (if story allows)                 │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → init container lifecycle vs CrashLoop on main container   │
 └─────────────────────────────────────────────────────────────┘`, ns))
 	case scenario.Case008:
@@ -434,6 +441,7 @@ func debriefStatic(def *scenario.Definition) string {
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #008 — CLOSED                                         │
 │  "The Red-Tape Room"                                        │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  ResourceQuota precinct-paperwork caps requests.cpu at 100m;  │
@@ -442,7 +450,7 @@ func debriefStatic(def *scenario.Definition) string {
 │  FIX                                                        │
 │  Raise quota or lower Deployment requests (see hot reply).  │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → kubectl describe resourcequota / describe pod events     │
 └─────────────────────────────────────────────────────────────┘`)
 	case scenario.Case009:
@@ -450,6 +458,7 @@ func debriefStatic(def *scenario.Definition) string {
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #009 — CLOSED                                         │
 │  "Evidence Locker Blues"                                    │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  PVC uses StorageClass noir-vault-never-built — no          │
@@ -458,14 +467,15 @@ func debriefStatic(def *scenario.Definition) string {
 │  FIX                                                        │
 │  Patch PVC to a real StorageClass (e.g. standard) or add PV │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → describe pvc / storageclass / events FailedMount        │
 └─────────────────────────────────────────────────────────────┘`)
 	case scenario.Case010:
 		return strings.TrimSpace(`
 ┌─────────────────────────────────────────────────────────────┐
 │  CASE #010 — CLOSED                                         │
-│  "The Silent Corridor"                                     │
+│  "The Silent Corridor"                                      │
+│  (mock desk debrief — training floor)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ROOT CAUSE                                                 │
 │  NetworkPolicy lock-the-door denies all egress for tape-deck│
@@ -474,10 +484,10 @@ func debriefStatic(def *scenario.Definition) string {
 │  FIX                                                        │
 │  Delete or patch NetworkPolicy to allow required egress.    │
 │                                                             │
-│  STUDY                                                      │
+│  WHAT TO STUDY                                              │
 │  → NetworkPolicy egress + DNS / cluster dependencies         │
 └─────────────────────────────────────────────────────────────┘`)
 	default:
-		return "Case closed. (No debrief text for this scenario.)"
+		return "Case closed — no desk debrief on file for this scenario. The namespace may still hold evidence; start with observe."
 	}
 }

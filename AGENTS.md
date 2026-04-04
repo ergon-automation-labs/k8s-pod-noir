@@ -1,13 +1,21 @@
 # Agent / contributor notes (pod-noir)
 
+## Setup from scratch
+
+**[docs/setup.md](docs/setup.md)** — install Docker, `kubectl`, local cluster (kind / alternatives), kubeconfig for Docker, then `make build` / `make run`.
+
 ## Cursor rules
 
-Project rules live under [`.cursor/rules/`](.cursor/rules/) (for example README sync, **progress log** sync). They apply in Cursor when this folder is the workspace.
+Project rules live under [`.cursor/rules/`](.cursor/rules/): **[readme-sync](.cursor/rules/readme-sync.mdc)** (player-facing README), **[progress-sync](.cursor/rules/progress-sync.mdc)** (PROGRESS + monthly log), **[northstar-sync](.cursor/rules/northstar-sync.mdc)** (constitution **[docs/pod-noir-northstar.md](docs/pod-noir-northstar.md)** + **[docs/architecture-decisions.md](docs/architecture-decisions.md)**). They apply in Cursor when this folder is the workspace.
 
 ## Progress log
 
 - **[PROGRESS.md](PROGRESS.md)** — short index + snapshot (keep small).
 - **`docs/progress/YYYY-MM.md`** — monthly bullets; add a new file when the month changes.
+
+## Contacts (NPCs)
+
+Four **wire-room** personas are implemented: **Senior Detective** (`hint senior`; roster via bare **`hint`**), **Sysadmin**, **Network Engineer**, **Archivist**. Unlock rules, **per-scenario wire copy** (`wire_messages.go`), and **`WireRoster`** live under **`internal/contacts/`**; session routing in **`internal/session/session.go`**. **LLM wire contacts:** HTTP providers implement **`llm.ContactWirer`** — **`POD_NOIR_LLM_CONTACT_WIRE`** (default on); static fallback on mock/disabled/error (see **`internal/llm/contact_wire.go`**).
 
 ## Playtesting
 

@@ -8,9 +8,9 @@ _Update when you ship player-facing, scenario, policy, or CI/tooling changes._
 
 | Area | Current state (one line each) |
 |------|-------------------------------|
-| **Play** | 10 scenarios (quota, PVC, NetworkPolicy among others); solve mode + precinct; REPL shortcuts & per-case solve hints. |
+| **Play** | 10 scenarios; solve mode + precinct; **four wire NPCs** + optional **HTTP LLM** wire copy (`POD_NOIR_LLM_CONTACT_WIRE`); REPL shortcuts & solve hints. |
 | **Build / CI** | `lint` → `test` → `integration` (kind + digest-pinned node + `playtest-smoke.sh` with `CI=true`); optional **`core.hooksPath`** → **`githooks/`** (**pre-commit** + **pre-push** playtest); `make lint-docker` matches lint job. |
-| **Docs** | [README](README.md), [AGENTS.md](AGENTS.md), [playtest checklist](docs/playtest-checklist.md), [northstar](docs/pod-noir-northstar.md); Cursor rules for README + [progress](.cursor/rules/progress-sync.mdc). |
+| **Docs** | [README](README.md), [AGENTS.md](AGENTS.md), [playtest checklist](docs/playtest-checklist.md), [northstar](docs/pod-noir-northstar.md), [architecture decisions](docs/architecture-decisions.md); Cursor rules: README + progress + northstar sync. |
 
 ## Log by month
 

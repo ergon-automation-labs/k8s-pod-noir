@@ -29,7 +29,7 @@ Use: `make run RUN_EXTRA='-scenario <case-id>'` (skips file cabinet).
 1. [ ] **Briefing** — read the box; note namespace `pod-noir`.
 2. [ ] **observe** — pods/events load; field note if shown (first time).
 3. [ ] **examine pod** / **check logs** / **trace** — at least one deep dive.
-4. [ ] **accuse** — get a **HOT** once (adjust wording if needed); confirm solve unlocks.
+4. [ ] **accuse** — get a **HOT** once (adjust wording if needed); confirm solve unlocks. Optional: **`hint`** (roster), **`hint senior`** / other contacts after their unlocks.
 5. [ ] **solve** — one mutating `kubectl` that fits precinct (`-n pod-noir`, no `-A` / `-k` tricks).
 6. [ ] Fix the cluster until **observe** looks healthy.
 7. [ ] **debrief** — precinct victory check passes; mock debrief prints.
