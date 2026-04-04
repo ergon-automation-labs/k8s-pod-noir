@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Tracked in-repo hook. Enable: ./scripts/setup-git-hooks.sh  (sets core.hooksPath=githooks)
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+exec "$ROOT/scripts/pre-commit-playtest.sh"

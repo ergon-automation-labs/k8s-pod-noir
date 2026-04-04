@@ -117,7 +117,7 @@ Tone, learning loop, and non-goals live in **[docs/pod-noir-northstar.md](docs/p
 - **`make playtest-smoke-ci`** — same **`doctor` + kubectl report** as the **integration** job, **inside Docker** (builds `./bin/podnoir` in the dev image — no host **Go** required).
 - **[docs/playtest-checklist.md](docs/playtest-checklist.md)** — a **small scenario matrix** and a tight loop so you don’t have to play every folder before a release.
 
-**Pre-commit (optional):** `pip install pre-commit && pre-commit install` runs **[`.pre-commit-config.yaml`](.pre-commit-config.yaml)** — including **`scripts/pre-commit-playtest.sh`**, which runs **`playtest-smoke`** when **Docker**, **`kubectl`**, and a **reachable cluster** are present; otherwise it **prints a skip reason** and exits **0** (so commits are not blocked offline). Set **`SKIP_PLAYTEST_SMOKE=1`** or **`POD_NOIR_SKIP_PLAYTEST=1`** to silence the hook.
+**Git hooks (optional):** the tracked directory **[`githooks/`](githooks/)** (not a dot-folder — it is part of the repo). Once per clone, run **`make git-hooks`** or **`./scripts/setup-git-hooks.sh`** to set **`git config core.hooksPath githooks`** so Git runs **`githooks/pre-commit`** (delegates to **`scripts/pre-commit-playtest.sh`**). It runs **`playtest-smoke`** when **Docker**, **`kubectl`**, and a **reachable cluster** exist; otherwise it **prints a skip reason** and exits **0**. Set **`SKIP_PLAYTEST_SMOKE=1`** or **`POD_NOIR_SKIP_PLAYTEST=1`** to silence. **[`.pre-commit-config.yaml`](.pre-commit-config.yaml)** is only for optional **`pre-commit run`** (whitespace etc.); it does not install the playtest hook — use **`hooksPath`** for that.
 
 ## Development
 
@@ -129,6 +129,7 @@ make manifests-lint # embedded scenario manifests must parse as YAML
 make compile        # ./bin/podnoir via Compose (Linux ELF; see above)
 make playtest-smoke    # doctor + optional kubectl (see Playtesting)
 make playtest-smoke-ci # integration parity: build + smoke in Docker (no host Go)
+make git-hooks         # core.hooksPath=githooks (tracked githooks/pre-commit)
 make help
 ```
 

@@ -1,5 +1,7 @@
-# Install: pip install pre-commit && pre-commit install
-# Optional env: SKIP_PLAYTEST_SMOKE=1 — skip cluster smoke on commits
+# Optional: pip install pre-commit && pre-commit run --all-files
+# On-commit playtest uses tracked hooks: ./scripts/setup-git-hooks.sh  (core.hooksPath=githooks)
+# Do not use "pre-commit install" for playtest — it writes .git/hooks, ignored when hooksPath is set.
+# Env: SKIP_PLAYTEST_SMOKE=1 — skip cluster smoke
 fail_fast: false
 
 repos:
@@ -9,13 +11,3 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-merge-conflict
-
-  - repo: local
-    hooks:
-      - id: podnoir-playtest-smoke
-        name: podnoir playtest smoke (skips without Docker+kube)
-        entry: scripts/pre-commit-playtest.sh
-        language: script
-        pass_filenames: false
-        stages: [pre-commit]
-        verbose: true

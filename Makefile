@@ -11,7 +11,7 @@ RUN_EXTRA ?=
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 
-.PHONY: help build run compile test lint-docker smoke playtest-smoke playtest-smoke-ci build-native clean ensure-bin-dir manifests-lint lint
+.PHONY: help build run compile test lint-docker smoke playtest-smoke playtest-smoke-ci git-hooks build-native clean ensure-bin-dir manifests-lint lint
 
 help:
 	@echo "make build        - Build runtime image (pod-noir:local)"
@@ -26,6 +26,7 @@ help:
 	@echo "make build-native - go build ./cmd/podnoir (requires local Go)"
 	@echo "make manifests-lint - validate embedded scenario YAML parses"
 	@echo "make lint         - gofmt + go vet + manifests-lint (needs local Go; CI runs this first)"
+	@echo "make git-hooks   - git config core.hooksPath=githooks (tracked hooks/; run once per clone)"
 	@echo "See docker-compose.yml for kubeconfig / host.docker.internal notes."
 	@echo "Integration env: POD_NOIR_EVENTS_ADAPTER, POD_NOIR_NATS_URL, POD_NOIR_NATS_BRIDGE, ..."
 
@@ -48,6 +49,9 @@ lint-docker:
 
 smoke:
 	$(COMPOSE) run --rm podnoir doctor
+
+git-hooks:
+	@./scripts/setup-git-hooks.sh
 
 playtest-smoke:
 	@./scripts/playtest-smoke.sh
