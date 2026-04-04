@@ -11,7 +11,7 @@ RUN_EXTRA ?=
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 
-.PHONY: help build run compile test lint-docker smoke build-native clean ensure-bin-dir manifests-lint lint
+.PHONY: help build run compile test lint-docker smoke playtest-smoke build-native clean ensure-bin-dir manifests-lint lint
 
 help:
 	@echo "make build        - Build runtime image (pod-noir:local)"
@@ -20,6 +20,7 @@ help:
 	@echo "make run          - File cabinet menu then REPL; ~/.kube mounted; kube-in-Docker env rewrites API host"
 	@echo "                 RUN_EXTRA='-scenario case-002-...' skips menu / picks case directly"
 	@echo "make smoke        - podnoir doctor (cluster connectivity check in Docker)"
+	@echo "make playtest-smoke - doctor + optional host kubectl checks; see docs/playtest-checklist.md"
 	@echo "make compile      - Produce ./bin/podnoir (Linux binary via Go container)"
 	@echo "make build-native - go build ./cmd/podnoir (requires local Go)"
 	@echo "make manifests-lint - validate embedded scenario YAML parses"
@@ -46,6 +47,9 @@ lint-docker:
 
 smoke:
 	$(COMPOSE) run --rm podnoir doctor
+
+playtest-smoke:
+	@./scripts/playtest-smoke.sh
 
 ensure-bin-dir:
 	@mkdir -p bin

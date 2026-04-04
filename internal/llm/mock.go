@@ -80,6 +80,12 @@ func accusationHot(def *scenario.Definition, h string, hotScore int) bool {
 		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "selector") || strings.Contains(h, "endpoint") || strings.Contains(h, "service") || strings.Contains(h, "label")))
 	case scenario.Case007:
 		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "init") || strings.Contains(h, "gate") || strings.Contains(h, "initcontainer")))
+	case scenario.Case008:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "quota") || strings.Contains(h, "resourcequota") || strings.Contains(h, "exceeded")))
+	case scenario.Case009:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "pvc") || strings.Contains(h, "storageclass") || strings.Contains(h, "volume")))
+	case scenario.Case010:
+		return hotScore >= 2 || (hotScore >= 1 && (strings.Contains(h, "networkpolicy") || strings.Contains(h, "egress") || strings.Contains(h, "dns")))
 	default:
 		return hotScore >= 2
 	}
@@ -171,6 +177,44 @@ func hotReply(def *scenario.Definition) AccuseResult {
 				dep, ns,
 			),
 		}
+	case scenario.Case008:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"Exactly — **ResourceQuota** caps requests.cpu for the whole namespace; `ledger-queue` asks for more than the precinct stamped. "+
+					"Pods never get scheduled under that ceiling.\n\n"+
+					"Raise the quota or lower the Deployment request, e.g.\n"+
+					"  kubectl patch resourcequota precinct-paperwork -n %[2]s --type=json "+
+					`-p='[{"op":"replace","path":"/spec/hard/requests.cpu","value":"500m"}]'`+"\n"+
+					"or patch deployment/%[1]s to reduce `resources.requests.cpu`.",
+				dep, ns,
+			),
+		}
+	case scenario.Case009:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"Right — the **PVC** points at a **StorageClass** the cluster doesn't provision (`noir-vault-never-built`). "+
+					"The claim stays Pending; the Pod can't mount.\n\n"+
+					"Point the PVC at a real class (often `standard` on kind), e.g.\n"+
+					"  kubectl patch pvc evidence-vol -n %[1]s --type=merge "+
+					`-p '{"spec":{"storageClassName":"standard"}}'`+"\n"+
+					"or create a matching PV if your story forbids dynamic provisioning.",
+				ns,
+			),
+		}
+	case scenario.Case010:
+		return AccuseResult{
+			Judgment: Hot,
+			Reply: fmt.Sprintf(
+				"You nailed it — **NetworkPolicy** `lock-the-door` selects `tape-deck` pods and **denies all egress**. "+
+					"The start script needs DNS (`nslookup`); with no egress to kube-dns, the container exits.\n\n"+
+					"Delete or relax the policy, e.g.\n"+
+					"  kubectl delete networkpolicy lock-the-door -n %[1]s\n"+
+					"or add egress rules for UDP/53 and whatever else the app needs.",
+				ns,
+			),
+		}
 	default:
 		return AccuseResult{Judgment: Hot, Reply: "That's the right root cause for this case. Use solve mode and kubectl to fix the workload."}
 	}
@@ -203,6 +247,21 @@ func warmSymptomReply(def *scenario.Definition) AccuseResult {
 		return AccuseResult{
 			Judgment: Warm,
 			Reply:    "Something runs before the app — good ear. Say whether it's init, sidecar policy, or the main container never scheduling.",
+		}
+	case scenario.Case008:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "The cluster is refusing on paper — good instinct. Say whether it's quota, limits, or admission before you chase the binary.",
+		}
+	case scenario.Case009:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "Storage is a suspect — tighten it: is the claim bound, the class real, or the mount path wrong?",
+		}
+	case scenario.Case010:
+		return AccuseResult{
+			Judgment: Warm,
+			Reply:    "Network story — is it policy, DNS, Service mesh, or something that only fails when traffic leaves the pod?",
 		}
 	default:
 		return AccuseResult{
@@ -370,6 +429,54 @@ func debriefStatic(def *scenario.Definition) string {
 │  STUDY                                                      │
 │  → init container lifecycle vs CrashLoop on main container   │
 └─────────────────────────────────────────────────────────────┘`, ns))
+	case scenario.Case008:
+		return strings.TrimSpace(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #008 — CLOSED                                         │
+│  "The Red-Tape Room"                                        │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  ResourceQuota precinct-paperwork caps requests.cpu at 100m;  │
+│  ledger-queue requests 250m — scheduling fails.           │
+│                                                             │
+│  FIX                                                        │
+│  Raise quota or lower Deployment requests (see hot reply).  │
+│                                                             │
+│  STUDY                                                      │
+│  → kubectl describe resourcequota / describe pod events     │
+└─────────────────────────────────────────────────────────────┘`)
+	case scenario.Case009:
+		return strings.TrimSpace(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #009 — CLOSED                                         │
+│  "Evidence Locker Blues"                                    │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  PVC uses StorageClass noir-vault-never-built — no          │
+│  provisioner; claim stuck Pending; mount fails.           │
+│                                                             │
+│  FIX                                                        │
+│  Patch PVC to a real StorageClass (e.g. standard) or add PV │
+│                                                             │
+│  STUDY                                                      │
+│  → describe pvc / storageclass / events FailedMount        │
+└─────────────────────────────────────────────────────────────┘`)
+	case scenario.Case010:
+		return strings.TrimSpace(`
+┌─────────────────────────────────────────────────────────────┐
+│  CASE #010 — CLOSED                                         │
+│  "The Silent Corridor"                                     │
+├─────────────────────────────────────────────────────────────┤
+│  ROOT CAUSE                                                 │
+│  NetworkPolicy lock-the-door denies all egress for tape-deck│
+│  pods — DNS (nslookup) fails; container exits.            │
+│                                                             │
+│  FIX                                                        │
+│  Delete or patch NetworkPolicy to allow required egress.    │
+│                                                             │
+│  STUDY                                                      │
+│  → NetworkPolicy egress + DNS / cluster dependencies         │
+└─────────────────────────────────────────────────────────────┘`)
 	default:
 		return "Case closed. (No debrief text for this scenario.)"
 	}

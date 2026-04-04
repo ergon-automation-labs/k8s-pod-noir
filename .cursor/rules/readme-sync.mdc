@@ -13,6 +13,7 @@ When a change affects **how people run, configure, or play** the project—or **
 - **Session / game loop**: `internal/session` (REPL commands, shortcuts, solve mode, precinct policy, debrief, dossier).
 - **Kube / scenarios**: `internal/kubectl`, `internal/scenario` (doctor, namespaces, safety/policy that players should know).
 - **Ops**: `Makefile`, `docker-compose.yml`, `Dockerfile`, `.github/workflows/*`, config/env in `internal/config` or `POD_NOIR_*` usage.
+- **Playtest**: **[docs/playtest-checklist.md](docs/playtest-checklist.md)**, **[scripts/playtest-smoke.sh](scripts/playtest-smoke.sh)** when smoke steps or recommended scenarios change.
 
 ## Sections to align (edit only what changed)
 
@@ -23,6 +24,7 @@ When a change affects **how people run, configure, or play** the project—or **
 | REPL / solve | REPL shortcuts, solve-mode / precinct bullets |
 | Env / integration | Environment (`POD_NOIR_*`) table |
 | CI / dev | Development commands, CI (GitHub Actions), **[AGENTS.md](AGENTS.md)** if contributor paths change |
+| Playtesting | **Playtesting** section, Development `make` list |
 
 ## Style
 

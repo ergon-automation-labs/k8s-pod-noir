@@ -37,7 +37,7 @@ func main() {
 
 	cfgPath := flag.String("config", "", "path to config YAML (optional)")
 	dataDir := flag.String("data-dir", "", "app data directory for sqlite (default ~/.pod-noir)")
-	scenID := flag.String("scenario", "", "omit for file cabinet; or case-001 … case-007 ids (see README)")
+	scenID := flag.String("scenario", "", "omit for file cabinet; or case-001 … case-010 ids (see README)")
 	skipCleanup := flag.Bool("skip-cleanup", false, "do not delete the scenario namespace on exit")
 	flag.Parse()
 

@@ -87,6 +87,40 @@ func SeniorDetectiveMessage(def *scenario.Definition) string {
 
   [ message logged — court runs on order ]
 ─────────────────────────────────────────────────────────────`
+	case scenario.Case008:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "When the city says you only get a sliver of CPU on the whole floor,
+  your witness doesn't get a chair — they get a form. Read ResourceQuota
+  like statute: hard limits, no poetry."
+
+  [ message logged — rubber never sleeps ]
+─────────────────────────────────────────────────────────────`
+	case scenario.Case009:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "A PVC is a promise to a vault. If the StorageClass is fiction, the
+  lock never clicks. Describe the claim before you blame the container —
+  Pending means the building inspector hasn't stamped the deed."
+
+  [ message logged — keys have to exist ]
+─────────────────────────────────────────────────────────────`
+	case scenario.Case010:
+		return `
+─────────────────────────────────────────────────────────────
+  [ INCOMING — SENIOR DETECTIVE / WIRE TWO ]
+
+  "Policy without egress is a room with no doors — DNS can't leave, the
+  API can't leave, nothing can leave. NetworkPolicy isn't drama; it's
+  jurisdiction. Read who the selector catches, then read what they're
+  allowed to walk to."
+
+  [ message logged — firewalls have addresses ]
+─────────────────────────────────────────────────────────────`
 	default:
 		return SeniorDetectiveStubMessageDefault()
 	}
@@ -123,7 +157,8 @@ func SeniorPath(def *scenario.Definition) bool {
 	}
 	switch def.ID {
 	case scenario.Case001, scenario.Case002, scenario.Case003,
-		scenario.Case004, scenario.Case005, scenario.Case006, scenario.Case007:
+		scenario.Case004, scenario.Case005, scenario.Case006, scenario.Case007,
+		scenario.Case008, scenario.Case009, scenario.Case010:
 		return true
 	default:
 		return false

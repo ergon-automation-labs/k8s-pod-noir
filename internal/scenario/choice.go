@@ -17,6 +17,9 @@ var choiceAliases = map[string]ID{
 	"5": Case005, "05": Case005, "five": Case005,
 	"6": Case006, "06": Case006, "six": Case006,
 	"7": Case007, "07": Case007, "seven": Case007,
+	"8": Case008, "08": Case008, "eight": Case008,
+	"9": Case009, "09": Case009, "nine": Case009,
+	"10": Case010, "ten": Case010,
 
 	"overnight": Case001, "shift": Case001, "payments": Case001,
 	"ghost": Case002, "credential": Case002, "ledger": Case002,
@@ -25,6 +28,10 @@ var choiceAliases = map[string]ID{
 	"oom": Case005, "memory": Case005, "margin": Case005,
 	"wire": Case006, "gateway": Case006, "selector": Case006,
 	"witness": Case007, "init": Case007, "gate": Case007,
+	"quota": Case008, "redtape": Case008, "bureaucracy": Case008,
+	"locker": Case009, "pvc": Case009, "evidence": Case009, "storage": Case009,
+	"corridor": Case010, "policy": Case010, "networkpolicy": Case010, "silent": Case010,
+	"tape": Case010, "deck": Case010,
 }
 
 // MatchCaseChoice maps menu input to a scenario ID.
@@ -51,5 +58,5 @@ func MatchCaseChoice(raw string) (ID, error) {
 			return known, nil
 		}
 	}
-	return "", fmt.Errorf("unknown folder %q — try 1–7, a case id, or quit", raw)
+	return "", fmt.Errorf("unknown folder %q — try 1–10, a case id, or quit", raw)
 }

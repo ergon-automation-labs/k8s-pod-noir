@@ -240,6 +240,9 @@ Solve mode (examples):
   case 005: raise memory limits or fix start command on deployment/memory-witness
   case 006: kubectl patch service gateway-svc ... selector app=gateway-api
   case 007: fix or remove failing initContainer on deployment/witness-hold -n pod-noir
+  case 008: raise ResourceQuota or lower deployment requests — ledger-queue -n pod-noir
+  case 009: fix PVC storageClassName / binding — evidence-vol, evidence-worker -n pod-noir
+  case 010: relax NetworkPolicy egress or delete lock-the-door — tape-deck -n pod-noir
   kubectl patch ... --type=json OR --type=strategic  (see debrief)
 
 Solve mode: r / again repeats last kubectl. Precinct blocks -A, -k/kustomize, namespace delete, cluster admins, taint, etc.; apply -f needs -n and YAML is checked (no other namespace, no cluster-scoped kinds).`))

@@ -20,6 +20,7 @@ When a task **ships** meaningful work (features, scenarios, solve/CI policy, pla
 
 - **New / changed scenario**, REPL/solve behavior, precinct rules, or mock/debrief copy → month file + Snapshot if needed.
 - **CI, Makefile, Compose, AGENTS, major README sections** → month file + Snapshot row “Build / CI” or “Docs” if applicable.
+- **Playtest smoke / checklist** changes → month file + Snapshot “Docs” if the story is new or materially changes how you validate releases.
 - **Tiny fix** (typo, one test): optional one bullet in the month file or skip if negligible—use judgment.
 
 ## Style

@@ -30,6 +30,10 @@ func TestMatchCaseChoice(t *testing.T) {
 	if err != nil || id != Case007 {
 		t.Fatalf("7: %v %v", id, err)
 	}
+	id, err = MatchCaseChoice("10")
+	if err != nil || id != Case010 {
+		t.Fatalf("10: %v %v", id, err)
+	}
 	_, err = MatchCaseChoice("nope")
 	if err == nil {
 		t.Fatal("expected error")

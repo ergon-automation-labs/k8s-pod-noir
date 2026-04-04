@@ -30,6 +30,15 @@ var case006 []byte
 //go:embed manifests/case007.yaml
 var case007 []byte
 
+//go:embed manifests/case008.yaml
+var case008 []byte
+
+//go:embed manifests/case009.yaml
+var case009 []byte
+
+//go:embed manifests/case010.yaml
+var case010 []byte
+
 type ID string
 
 const (
@@ -40,6 +49,9 @@ const (
 	Case005 ID = "case-005-thin-margin"
 	Case006 ID = "case-006-ghost-wire"
 	Case007 ID = "case-007-waiting-on-a-witness"
+	Case008 ID = "case-008-the-red-tape-room"
+	Case009 ID = "case-009-evidence-locker-blues"
+	Case010 ID = "case-010-the-silent-corridor"
 )
 
 type Definition struct {
@@ -272,13 +284,86 @@ func ByID(id ID) (*Definition, error) {
 				"kubectl patch deployment witness-hold -n pod-noir — fix or remove the failing initContainer (e.g. make gate exit 0)",
 			},
 		}, nil
+	case Case008:
+		return &Definition{
+			ID:                        Case008,
+			Title:                     "The Red-Tape Room",
+			Namespace:                 "pod-noir",
+			FolderTease:               "The ledger clerk stamped 'insufficient ceiling' — your witness can't get a chair",
+			ApplySteps:                [][]byte{case008},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "ledger-queue",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: Pending + 'exceeded quota' in events means the namespace budget, not the app binary.",
+			FieldNoteAfterExamine:     "Training note: compare Pod `resources.requests` to `kubectl describe resourcequota` in the same namespace.",
+			HotHints: []string{
+				"quota", "resourcequota", "exceeded", "cpu", "request", "limit",
+			},
+			WarmHints: []string{
+				"pending", "schedule", "deploy", "namespace",
+			},
+			SolveHints: []string{
+				"kubectl describe resourcequota -n pod-noir",
+				"kubectl patch resourcequota precinct-paperwork -n pod-noir — raise limits, or patch deployment ledger-queue to lower requests",
+			},
+		}, nil
+	case Case009:
+		return &Definition{
+			ID:                        Case009,
+			Title:                     "Evidence Locker Blues",
+			Namespace:                 "pod-noir",
+			FolderTease:               "Evidence room has a lock; nobody filed the combination with storage",
+			ApplySteps:                [][]byte{case009},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "evidence-worker",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: PVC Pending + Pod stuck mounting — triage the claim before blaming the container.",
+			FieldNoteAfterExamine:     "Training note: Events often say `FailedMount` or `unbound PersistentVolumeClaims` — follow the PVC first.",
+			HotHints: []string{
+				"pvc", "persistentvolume", "storageclass", "pending", "bound",
+				"mount", "volume",
+			},
+			WarmHints: []string{
+				"storage", "claim", "disk", "deploy",
+			},
+			SolveHints: []string{
+				"kubectl describe pvc evidence-vol -n pod-noir",
+				"kubectl patch pvc evidence-vol -n pod-noir — fix storageClassName (e.g. standard or cluster default) or provision a matching PV",
+			},
+		}, nil
+	case Case010:
+		return &Definition{
+			ID:                        Case010,
+			Title:                     "The Silent Corridor",
+			Namespace:                 "pod-noir",
+			FolderTease:               "The wire hums inside the pod; the hallway to the cluster DNS is another jurisdiction",
+			ApplySteps:                [][]byte{case010},
+			RolloutWaitAfterFirstStep: "",
+			SolveDeployment:           "tape-deck",
+			VictoryMode:               "rollout",
+			FieldNoteAfterObserve:     "Training note: CrashLoop with no image pull error — check startup commands, policies, and whether the pod can reach DNS or the API.",
+			FieldNoteAfterExamine:     "Training note: NetworkPolicy is namespaced law — `kubectl get networkpolicy -n` shows who may talk to whom.",
+			HotHints: []string{
+				"networkpolicy", "egress", "firewall", "dns", "policy", "wire",
+			},
+			WarmHints: []string{
+				"crash", "network", "connect", "timeout", "deploy",
+			},
+			SolveHints: []string{
+				"kubectl describe networkpolicy lock-the-door -n pod-noir",
+				"kubectl delete networkpolicy lock-the-door -n pod-noir — or patch egress to allow DNS (udp/53) and needed destinations",
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown scenario %q", id)
 	}
 }
 
 func List() []ID {
-	return []ID{Case001, Case002, Case003, Case004, Case005, Case006, Case007}
+	return []ID{
+		Case001, Case002, Case003, Case004, Case005, Case006, Case007,
+		Case008, Case009, Case010,
+	}
 }
 
 // boxContentWidth is inner text width between "│  " and "│" (full row = 63 chars).
@@ -391,6 +476,48 @@ func (d *Definition) Briefing(detective string) string {
 		boxRow(&b, "")
 		boxRow(&b, `Handwritten margin (D.): "Gates before testimony — check who blocks the door."`)
 		boxRow(&b, "")
+	case Case008:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 008 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "City hall says the floor plan allows one watt of ambition;")
+		boxRow(&b, "your witness filed for three. The stamp says *insufficient ceiling*.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. Municipal payments queue (batch overnight)")
+		boxRow(&b, "Call.... 08:01 — comptroller, voice like a rubber stamp")
+		boxRow(&b, `Says.... "ledger-queue never schedules; paperwork says we're fine."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "Quotas are the law — read the ResourceQuota first."`)
+		boxRow(&b, "")
+	case Case009:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 009 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "Evidence chain is immaculate on paper; the locker key is typed to a")
+		boxRow(&b, "vault number that was never built. The archivist paces in the hall.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. County records digitization")
+		boxRow(&b, "Call.... 13:22 — archivist, polite panic")
+		boxRow(&b, `Says.... "evidence-worker can't mount; PVC says Pending forever."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "StorageClass is the deed — no deed, no lock."`)
+		boxRow(&b, "")
+	case Case010:
+		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
+		boxRow(&b, "THE CLUSTER AGENCY ~ wire room copy, training floor")
+		boxRow(&b, fmt.Sprintf(`CASE FILE 010 — "%s"`, d.Title))
+		fmt.Fprintf(&b, "├─────────────────────────────────────────────────────────────┤\n")
+		boxRow(&b, "The tape deck spins inside the interview room; the corridor to the")
+		boxRow(&b, "DNS switchboard is sealed — someone posted a policy with no exits.")
+		boxRow(&b, "")
+		boxRow(&b, "Client.. Radio evidence archive")
+		boxRow(&b, "Call.... 01:44 — night engineer, static on the line")
+		boxRow(&b, `Says.... "tape-deck crashes before it spools; nothing listens on the wire."`)
+		boxRow(&b, "")
+		boxRow(&b, `Handwritten margin (D.): "NetworkPolicy is the building code — read egress."`)
+		boxRow(&b, "")
 	default:
 		fmt.Fprintf(&b, "┌─────────────────────────────────────────────────────────────┐\n")
 		boxRow(&b, "THE CLUSTER AGENCY")
@@ -421,6 +548,12 @@ func (d *Definition) CurtainLine() string {
 		return "Ready replicas hum in the back room. Out front, the switchboard still says *nobody home*."
 	case Case007:
 		return "The witness chair is empty, but someone in the antechamber keeps answering wrong on purpose."
+	case Case008:
+		return "The rubber stamp has more authority than the witness — until someone raises the ceiling."
+	case Case009:
+		return "The key fits a lock that was never hung on the wall — the room is real, the door isn't."
+	case Case010:
+		return "The reel turns in the dark; the hallway outside can't hear the subpoena for a name."
 	default:
 		return "The paperclip is bent. The cluster is honest in its own language."
 	}

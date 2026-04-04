@@ -9,6 +9,11 @@ Project rules live under [`.cursor/rules/`](.cursor/rules/) (for example README 
 - **[PROGRESS.md](PROGRESS.md)** — short index + snapshot (keep small).
 - **`docs/progress/YYYY-MM.md`** — monthly bullets; add a new file when the month changes.
 
+## Playtesting
+
+- **`make playtest-smoke`** — scripts **[scripts/playtest-smoke.sh](scripts/playtest-smoke.sh)** (doctor + optional `kubectl` on host).
+- **[docs/playtest-checklist.md](docs/playtest-checklist.md)** — recommended scenario subset and minimal REPL loop.
+
 ## Build & test (no local Go)
 
 - **`make test`** — `go test ./...` inside Docker Compose (matches CI **test**).
